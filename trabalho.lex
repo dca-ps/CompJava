@@ -49,8 +49,7 @@ COMMENT "(*"([^*]|"*"[^)])*"*)"
 {ID}       { yylval = Atributos( yytext ); return TK_ID; }
 {INT}      { yylval = Atributos( yytext, Tipo( "int" ) ); return TK_CINT; }
 {DOUBLE}   { yylval = Atributos( yytext, Tipo( "double" ) ); return TK_CDOUBLE; }
-
-.          { yylval = Atributos( yytext ); return *yytext; }
+.           { yylval = Atributos( yytext ); return *yytext; }
 
 %%
 

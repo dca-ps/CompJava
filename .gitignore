@@ -1,3 +1,5 @@
 *.idea
 *yy.c
 *tab*
+*.exe
+*.cc

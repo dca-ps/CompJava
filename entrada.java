@@ -1,4 +1,4 @@
 int abc = 2;
-int main (void){
+int main (){
 	System.out.print("ABC");
 }
