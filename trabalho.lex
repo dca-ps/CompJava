@@ -25,16 +25,16 @@ COMMENT "(*"([^*]|"*"[^)])*"*)"
 "double"      { yylval = Atributos( yytext ); return TK_DOUBLE; }
 "char"      { yylval = Atributos( yytext ); return TK_CHAR; }
 "boolean"      { yylval = Atributos( yytext ); return TK_BOOL; }
-"String"      { yylval = Atributos( yytext ); return TK_STRING; }
-"System.out.print"  { yylval = Atributos( yytext ); return TK_SYSO; }
-"if"       { yylval = Atributos( yytext ); return TK_IF; }
-"else"     { yylval = Atributos( yytext ); return TK_ELSE; }
-"for"      { yylval = Atributos( yytext ); return TK_FOR; }
-"do-while"       { yylval = Atributos( yytext ); return TK_DO;}
-"switch"       { yylval = Atributos( yytext ); return TK_DO; }
-"while"       { yylval = Atributos( yytext ); return TK_WHILE; }
+"string"      { yylval = Atributos( yytext ); return TK_STRING; }
+"imprimi"  { yylval = Atributos( yytext ); return TK_PRINT; }
+"si"       { yylval = Atributos( yytext ); return TK_IF; }
+"sinao"     { yylval = Atributos( yytext ); return TK_ELSE; }
+"para"      { yylval = Atributos( yytext ); return TK_FOR; }
+"facanto"       { yylval = Atributos( yytext ); return TK_DO;}
+"interruptor"       { yylval = Atributos( yytext ); return TK_SWITCH; }
+"enquanto"       { yylval = Atributos( yytext ); return TK_WHILE; }
 
-"static void main"      { yylval = Atributos( yytext ); return TK_MAIN; }
+"principal"      { yylval = Atributos( yytext ); return TK_MAIN; }
 
 
 

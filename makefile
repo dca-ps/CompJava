@@ -1,5 +1,5 @@
-all: trabalho entrada.java
-	trabalho.exe < entrada.java > gerado.cc
+all: trabalho entrada.br
+	trabalho.exe < entrada.br > gerado.cc
 #	gabarito.exe < gerado.cc
 #	g++ -o saida gerado.cc
 #	saida.exe

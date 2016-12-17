@@ -120,9 +120,9 @@ string includes =
 %}
 
 %token TK_ID TK_CINT TK_CDOUBLE TK_INT TK_DOUBLE TK_CHAR TK_BOOL
-%token TK_SYSO TK_CSTRING TK_STRING
+%token TK_PRINT TK_CSTRING TK_STRING
 %token TK_MAIG TK_MEIG TK_IG TK_DIF TK_IF TK_ELSE TK_AND TK_OR
-%token TK_FOR TK_DO TK_WHILE TK_MAIN
+%token TK_FOR TK_DO TK_WHILE TK_MAIN TK_SWITCH
 
 %left TK_AND
 %nonassoc '<' '>' TK_MAIG TK_MEIG '=' TK_DIF 
@@ -140,18 +140,11 @@ S : DECLS MAIN
     }
   ;
 
-TIPO : TK_INT{
-            $$.v = "i";
-        }
-        | TK_DOUBLE{
-              $$.v = "d";
-          }
-          | TK_CHAR{
-              $$.v = "c";
-          }
-          | TK_STRING{
-              $$.v = "s";
-          } ;
+TIPO    : TK_INT  { $$.t.tipo_base =  "I"; $$.v = $1.v; $$.c = "int"; }
+    | TK_DOUBLE   { $$.t.tipo_base = "D"; $$.v = $1.v; $$.c = "double"; }
+    | TK_BOOL   { $$.t.tipo_base = "B"; $$.v = $1.v; $$.c = "char"; }
+    | TK_CHAR   { $$.t.tipo_base = "C"; $$.v = $1.v; $$.c = "char"; }
+    | TK_STRING { $$.t.tipo_base = "S"; $$.v = $1.v; $$.c = "string"; }
 
   
 DECLS : DECL DECLS
@@ -163,12 +156,10 @@ DECLS : DECL DECLS
 DECL : VARS
        { $$.c = $1.c; }
      | FUNCTION
-
-
      ;
      
-FUNCTION : { empilha_ts(); }  CABECALHO '{' CORPO '}' { desempilha_ts(); }
-           { $$.c = $2.c + " {\n" + $4.c + " return Result;\n}\n";
+FUNCTION :  CABECALHO ':' CORPO
+           { $$.c = $1.c + " {\n" + $3.c + " return Result;\n}\n";
 
            }
          ;
@@ -176,7 +167,7 @@ FUNCTION : { empilha_ts(); }  CABECALHO '{' CORPO '}' { desempilha_ts(); }
 
 
 
-CABECALHO : TIPO TK_ID '(' OPC_PARAM ')'
+CABECALHO : TIPO TK_ID '/' OPC_PARAM '/'
             { 
               Tipo tipo( $1.v  );
               
@@ -190,7 +181,7 @@ OPC_PARAM :  PARAMS
             { $$ = Atributos(); }
           ;
           
-PARAMS : PARAM ',' PARAMS
+PARAMS : PARAM '~' PARAMS
          { $$.c = $1.c + $3.c; 
            // Concatenar as listas.
            $$.lista_tipo = $1.lista_tipo;
@@ -205,14 +196,14 @@ PARAMS : PARAM ',' PARAMS
        | PARAM                  
        ;  
          
-PARAM : TIPO IDS '=' E
+PARAM : TIPO IDS
       {
-        Tipo tipo = Tipo( $3.v  );
+        Tipo tipo = Tipo( $1.v  );
         
         $$ = Atributos();
-        $$.lista_str = $1.lista_str;
+        $$.lista_str = $2.lista_str;
         
-        for( int i = 0; i < $1.lista_str.size(); i ++ ) 
+        for( int i = 0; i < $2.lista_str.size(); i ++ )
           $$.lista_tipo.push_back( tipo );
       }
     | TIPO IDS '[' E ']'
@@ -220,9 +211,9 @@ PARAM : TIPO IDS '=' E
         Tipo tipo = Tipo( $1.v, toInt( $4.v ));
         
         $$ = Atributos();
-        $$.lista_str = $1.lista_str;
+        $$.lista_str = $2.lista_str;
         
-        for( int i = 0; i < $1.lista_str.size(); i ++ ) 
+        for( int i = 0; i < $2.lista_str.size(); i ++ )
           $$.lista_tipo.push_back( tipo );
       }
     ;
@@ -235,7 +226,7 @@ CORPO : VARS BLOCO
                  $1.c; }
       ;    
      
-VARS : VAR ';' VARS
+VARS : VAR '~' VARS
        { $$.c = $1.c + $3.c; }
      | 
        { $$ = Atributos(); }
@@ -274,11 +265,10 @@ IDS : IDS '=' TK_ID
         $$.lista_str.push_back( $1.v ); }
     ;
 
-MAIN : TK_MAIN '(' OPC_PARAM ')' '{' BLOCO '}'
-       { $$.c = "int main (" + $4.c + ") { \n" + $7.c + "\n}";
-        debug("main", $1);
-       }
+MAIN : TK_MAIN ':' BLOCO
+       { $$.c = "int main () { \n" + $3.c + "\n}";
 
+       }
      ;
      
 BLOCO : { var_temp.push_back( "" );} CMDS
@@ -287,7 +277,7 @@ BLOCO : { var_temp.push_back( "" );} CMDS
           $$.c = vars + $2.c; }
       ;  
       
-CMDS : CMD CMDS
+CMDS : CMD '~' CMDS
        { $$.c = $1.c + $2.c; }
      | { $$.c = ""; }
      ;  
@@ -297,10 +287,9 @@ CMD : PRINT
     | CMD_IF
     | BLOCO
     | CMD_FOR
-    | VARS
     ;   
     
-CMD_FOR : TK_FOR '(' NOME_VAR '=' E ';' E ';' E ')' '{' CMD '}'
+CMD_FOR : TK_FOR '/' NOME_VAR '=' E '~' E '~' E '/' ':' CMD
           { 
             string var_fim = gera_nome_var_temp( $2.t.tipo_base );
             string label_teste = gera_label( "teste_for" );
@@ -322,21 +311,21 @@ CMD_FOR : TK_FOR '(' NOME_VAR '=' E ';' E ';' E ')' '{' CMD '}'
           }
         ;
     
-CMD_IF : TK_IF '(' E ')' '{' CMD '}'
-         { $$ = gera_codigo_if( $2, $4.c, "" ); }  
-       | TK_IF '(' E ')'  CMD TK_ELSE CMD
-         { $$ = gera_codigo_if( $2, $4.c, $6.c ); }  
+CMD_IF : TK_IF '/' E '/' ':' CMD
+         { $$ = gera_codigo_if( $3, $6.c, "" ); }
+       | TK_IF '/' E '/' ':' CMD TK_ELSE ':' CMD
+         { $$ = gera_codigo_if( $3, $6.c, $9.c ); }
        ;
  
 
-PRINT : TK_SYSO '(' E ')' ';' CMD
+PRINT : TK_PRINT '/' E '/'
           { $$.c = $3.c + 
                    "  cout << " + $3.v + ";\n"
                    "  cout << endl;\n";
           }
         ;
   
-ATRIB : TK_ID '=' E ';'
+ATRIB : TK_ID '=' E
         { // Falta verificar se pode atribuir (perde ponto se não fizer).
           $1.t = consulta_ts( $1.v ) ;
           
@@ -347,7 +336,7 @@ ATRIB : TK_ID '=' E ';'
             
           debug( "ATRIB : TK_ID TK_ATRIB E ';'", $$ );
         } 
-      | TK_ID '[' E ']' '=' E ';'
+      | TK_ID '[' E ']' '=' E
         { // Falta testar: tipo, limite do array, e se a variável existe
           $$.c = $3.c + $6.c +
                  "  " + $1.v + "[" + $3.v + "] = " + $6.v + ";\n";
@@ -461,8 +450,8 @@ void debug( string producao, Atributos atr ) {
 
 void yyerror( const char* st )
 {
-  printf( "%s", st );
-  printf( "Linha: %d, \"%s\"\n", nlinha, yytext );
+  fprintf(stderr, "%s", st );
+  fprintf(stderr, "\nLinha: %d, \"%s\"\n", nlinha, yytext );
 }
 
 void erro( string msg ) {
