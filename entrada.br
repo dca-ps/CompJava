@@ -1,3 +1,11 @@
+int abc;
+double
 <comecatudo>
-    escrevi("Hello word");
+<se>
+escrevi("Digite a palavra 1: ");
+le(str1);
+escrevi("Digite a palavra 2: ");
+le(str2);
+str1 = str1 + str2;
+escrevi(str1);
 <fimtudo>

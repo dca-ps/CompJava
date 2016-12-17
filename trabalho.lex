@@ -9,7 +9,7 @@ DIGITO  [0-9]
 LETRA   [A-Za-z_]
 ID      {LETRA}({LETRA}|{DIGITO})*
 
-END         fim
+END         <fim
 ENDALL        <fimtudo>
 BEGINALL      <comecatudo>
 
