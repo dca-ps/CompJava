@@ -8,7 +8,7 @@ lex.yy.c: trabalho.lex
 	flex trabalho.lex
 
 y.tab.c: trabalho.y
-	bison -dy trabalho.y
+	bison -v trabalho.y
 
 trabalho: lex.yy.c y.tab.c
 	g++ -std=gnu++11 -o trabalho y.tab.c -L"C:\GnuWin32\lib" -lfl

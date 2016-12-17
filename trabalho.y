@@ -120,7 +120,7 @@ string includes =
 %}
 
 %token TK_ID TK_CINT TK_CDOUBLE TK_INT TK_DOUBLE TK_CHAR TK_BOOL
-%token TK_PRINT TK_CSTRING TK_STRING
+%token TK_PRINT TK_CSTRING TK_STRING TK_ENDFUN
 %token TK_MAIG TK_MEIG TK_IG TK_DIF TK_IF TK_ELSE TK_AND TK_OR
 %token TK_FOR TK_DO TK_WHILE TK_MAIN TK_SWITCH
 
@@ -140,11 +140,11 @@ S : DECLS MAIN
     }
   ;
 
-TIPO    : TK_INT  { $$.t.tipo_base =  "I"; $$.v = $1.v; $$.c = "int"; }
-    | TK_DOUBLE   { $$.t.tipo_base = "D"; $$.v = $1.v; $$.c = "double"; }
-    | TK_BOOL   { $$.t.tipo_base = "B"; $$.v = $1.v; $$.c = "char"; }
-    | TK_CHAR   { $$.t.tipo_base = "C"; $$.v = $1.v; $$.c = "char"; }
-    | TK_STRING { $$.t.tipo_base = "S"; $$.v = $1.v; $$.c = "string"; }
+TIPO    : TK_INT  { $$.t.tipo_base =  "i"; $$.v = $1.v; $$.c = "int"; }
+    | TK_DOUBLE   { $$.t.tipo_base = "d"; $$.v = $1.v; $$.c = "double"; }
+    | TK_BOOL   { $$.t.tipo_base = "b"; $$.v = $1.v; $$.c = "char"; }
+    | TK_CHAR   { $$.t.tipo_base = "c"; $$.v = $1.v; $$.c = "char"; }
+    | TK_STRING { $$.t.tipo_base = "s"; $$.v = $1.v; $$.c = "string"; }
 
   
 DECLS : DECL DECLS
@@ -169,7 +169,7 @@ FUNCTION :  CABECALHO ':' CORPO
 
 CABECALHO : TIPO TK_ID '/' OPC_PARAM '/'
             { 
-              Tipo tipo( $1.v  );
+              Tipo tipo( $1.t.tipo_base  );
               
               $$.c = declara_funcao( $2.v, tipo, $3.lista_str, $3.lista_tipo );
             }
@@ -198,7 +198,7 @@ PARAMS : PARAM '~' PARAMS
          
 PARAM : TIPO IDS
       {
-        Tipo tipo = Tipo( $1.v  );
+        Tipo tipo = Tipo( $1.t.tipo_base  );
         
         $$ = Atributos();
         $$.lista_str = $2.lista_str;
@@ -208,7 +208,7 @@ PARAM : TIPO IDS
       }
     | TIPO IDS '[' E ']'
       {
-        Tipo tipo = Tipo( $1.v, toInt( $4.v ));
+        Tipo tipo = Tipo( $1.t.tipo_base, toInt( $4.v ));
         
         $$ = Atributos();
         $$.lista_str = $2.lista_str;
@@ -234,7 +234,7 @@ VARS : VAR '~' VARS
      
 VAR : TIPO IDS '=' E
       {
-        Tipo tipo = Tipo(  $1.v  );
+        Tipo tipo = Tipo(  $1.t.tipo_base  );
         
         $$ = Atributos();
         
@@ -245,14 +245,14 @@ VAR : TIPO IDS '=' E
       }
     | TIPO IDS '[' E ']'
       {
-        Tipo tipo = Tipo(  $1.v ,
+        Tipo tipo = Tipo(  $1.t.tipo_base ,
                           toInt( $4.v ) );
         
         $$ = Atributos();
         
-        for( int i = 0; i < $1.lista_str.size(); i ++ ) {
-          $$.c += declara_variavel( $1.lista_str[i], tipo ) + ";\n";
-          insere_var_ts( $1.lista_str[i], tipo );
+        for( int i = 0; i < $2.lista_str.size(); i ++ ) {
+          $$.c += declara_variavel( $2.lista_str[i], tipo ) + ";\n";
+          insere_var_ts( $2.lista_str[i], tipo );
         }
       }
     ;
@@ -266,7 +266,8 @@ IDS : IDS '=' TK_ID
     ;
 
 MAIN : TK_MAIN ':' BLOCO
-       { $$.c = "int main () { \n" + $3.c + "\n}";
+
+      { $$.c = "int main () { \n" + $3.c + "\n}";
 
        }
      ;
@@ -289,9 +290,9 @@ CMD : PRINT
     | CMD_FOR
     ;   
     
-CMD_FOR : TK_FOR '/' NOME_VAR '=' E '~' E '~' E '/' ':' CMD
+CMD_FOR : TK_FOR '/' NOME_VAR '=' E '~' E '~' E TK_ENDFUN CMD
           { 
-            string var_fim = gera_nome_var_temp( $2.t.tipo_base );
+            string var_fim = gera_nome_var_temp( $3.t.tipo_base );
             string label_teste = gera_label( "teste_for" );
             string label_fim = gera_label( "fim_for" );
             string condicao = gera_nome_var_temp( "b" );
@@ -311,10 +312,10 @@ CMD_FOR : TK_FOR '/' NOME_VAR '=' E '~' E '~' E '/' ':' CMD
           }
         ;
     
-CMD_IF : TK_IF '/' E '/' ':' CMD
-         { $$ = gera_codigo_if( $3, $6.c, "" ); }
-       | TK_IF '/' E '/' ':' CMD TK_ELSE ':' CMD
-         { $$ = gera_codigo_if( $3, $6.c, $9.c ); }
+CMD_IF : TK_IF '/' E TK_ENDFUN CMD
+         { $$ = gera_codigo_if( $3, $5.c, "" ); }
+       | TK_IF '/' E TK_ENDFUN CMD TK_ELSE ':' CMD
+         { $$ = gera_codigo_if( $3, $5.c, $8.c ); }
        ;
  
 

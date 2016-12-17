@@ -44,6 +44,8 @@ COMMENT "(*"([^*]|"*"[^)])*"*)"
 "!="       { yylval = Atributos( yytext ); return TK_DIF; }
 "&&"       { yylval = Atributos( yytext ); return TK_AND; }
 "||"       { yylval = Atributos( yytext ); return TK_OR; }
+"/ :"       { yylval = Atributos( yytext ); return TK_ENDFUN; }
+
 
 
 
