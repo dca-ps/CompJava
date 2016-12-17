@@ -100,6 +100,7 @@ void debug( string producao, Atributos atr );
 int toInt( string valor );
 string toString( int n );
 
+
 Atributos gera_codigo_operador( Atributos s1, string opr, Atributos s3 );
 Atributos gera_codigo_if( Atributos expr, string cmd_then, string cmd_else );
 
@@ -121,7 +122,7 @@ string includes =
 %token TK_ID TK_CINT TK_CDOUBLE TK_INT TK_DOUBLE TK_CHAR TK_BOOL
 %token TK_SYSO TK_CSTRING TK_STRING
 %token TK_MAIG TK_MEIG TK_IG TK_DIF TK_IF TK_ELSE TK_AND TK_OR
-%token TK_FOR TK_DO TK_WHILE
+%token TK_FOR TK_DO TK_WHILE TK_MAIN
 
 %left TK_AND
 %nonassoc '<' '>' TK_MAIG TK_MEIG '=' TK_DIF 
@@ -130,34 +131,52 @@ string includes =
 
 %%
 
-S : DECLS MAIN 
+S : DECLS MAIN
     {
       cout << includes << endl;
       cout << $1.c << endl;
       cout << $2.c << endl;
+
     }
   ;
+
+TIPO : TK_INT{
+            $$.v = "i";
+        }
+        | TK_DOUBLE{
+              $$.v = "d";
+          }
+          | TK_CHAR{
+              $$.v = "c";
+          }
+          | TK_STRING{
+              $$.v = "s";
+          } ;
 
   
 DECLS : DECL DECLS
         { $$.c = $1.c + $2.c; }
-      | 
+      |
         { $$.c = ""; }
       ;  
 
 DECL : VARS
        { $$.c = $1.c; }
      | FUNCTION
+
+
      ;
      
-FUNCTION : { empilha_ts(); }  CABECALHO  CORPO { desempilha_ts(); }
-           { $$.c = $2.c + " {\n" + $4.c + 
-                    " return Result;\n}\n"; } 
+FUNCTION : { empilha_ts(); }  CABECALHO '{' CORPO '}' { desempilha_ts(); }
+           { $$.c = $2.c + " {\n" + $4.c + " return Result;\n}\n";
+
+           }
          ;
 
-TIPO : TK_INT | TK_DOUBLE | TK_CHAR | TK_STRING ;
 
-CABECALHO : TIPO TK_ID OPC_PARAM  
+
+
+CABECALHO : TIPO TK_ID '(' OPC_PARAM ')'
             { 
               Tipo tipo( $1.v  );
               
@@ -165,13 +184,13 @@ CABECALHO : TIPO TK_ID OPC_PARAM
             }
           ;
           
-OPC_PARAM : '(' PARAMS ')'
-            { $$ = $2; }
+OPC_PARAM :  PARAMS
+            { $$.c = $1.c; }
           |
             { $$ = Atributos(); }
           ;
           
-PARAMS : PARAM ';' PARAMS 
+PARAMS : PARAM ',' PARAMS
          { $$.c = $1.c + $3.c; 
            // Concatenar as listas.
            $$.lista_tipo = $1.lista_tipo;
@@ -186,9 +205,9 @@ PARAMS : PARAM ';' PARAMS
        | PARAM                  
        ;  
          
-PARAM : IDS ':' TK_ID 
+PARAM : TIPO IDS '=' E
       {
-        Tipo tipo = Tipo( traduz_nome_tipo_pascal( $3.v ) ); 
+        Tipo tipo = Tipo( $3.v  );
         
         $$ = Atributos();
         $$.lista_str = $1.lista_str;
@@ -196,7 +215,7 @@ PARAM : IDS ':' TK_ID
         for( int i = 0; i < $1.lista_str.size(); i ++ ) 
           $$.lista_tipo.push_back( tipo );
       }
-    | TIPO IDS '[' E ']' ';'
+    | TIPO IDS '[' E ']'
       {
         Tipo tipo = Tipo( $1.v, toInt( $4.v ));
         
@@ -222,18 +241,18 @@ VARS : VAR ';' VARS
        { $$ = Atributos(); }
      ;     
      
-VAR : IDS ':' TK_ID 
+VAR : TIPO IDS '=' E
       {
-        Tipo tipo = Tipo( traduz_nome_tipo_pascal( $3.v ) ); 
+        Tipo tipo = Tipo(  $1.v  );
         
         $$ = Atributos();
         
-        for( int i = 0; i < $1.lista_str.size(); i ++ ) {
-          $$.c += declara_variavel( $1.lista_str[i], tipo ) + ";\n";
-          insere_var_ts( $1.lista_str[i], tipo );
+        for( int i = 0; i < $2.lista_str.size(); i ++ ) {
+          $$.c += declara_variavel( $2.lista_str[i], tipo ) + ";\n";
+          insere_var_ts( $2.lista_str[i], tipo );
         }
       }
-    | TIPO IDS '[' E ']' ';'
+    | TIPO IDS '[' E ']'
       {
         Tipo tipo = Tipo(  $1.v ,
                           toInt( $4.v ) );
@@ -246,38 +265,42 @@ VAR : IDS ':' TK_ID
         }
       }
     ;
-    
-IDS : IDS ',' TK_ID 
+
+IDS : IDS '=' TK_ID
       { $$  = $1;
         $$.lista_str.push_back( $3.v ); }
-    | TK_ID 
+    | TK_ID
       { $$ = Atributos();
         $$.lista_str.push_back( $1.v ); }
-    ;          
+    ;
 
-MAIN : BLOCO '.'
-       { $$.c = "int main() { \n" + $1.c + "}\n"; } 
+MAIN : TK_MAIN '(' OPC_PARAM ')' '{' BLOCO '}'
+       { $$.c = "int main (" + $4.c + ") { \n" + $7.c + "\n}";
+        debug("main", $1);
+       }
+
      ;
      
-BLOCO : '{' { var_temp.push_back( "" );} CMDS '}'
+BLOCO : { var_temp.push_back( "" );} CMDS
         { string vars = var_temp[var_temp.size()-1];
           var_temp.pop_back();
-          $$.c = vars + $3.c; }
+          $$.c = vars + $2.c; }
       ;  
       
-CMDS : CMD ';' CMDS
-       { $$.c = $1.c + $3.c; }
+CMDS : CMD CMDS
+       { $$.c = $1.c + $2.c; }
      | { $$.c = ""; }
      ;  
      
-CMD : WRITELN
+CMD : PRINT
     | ATRIB 
     | CMD_IF
     | BLOCO
     | CMD_FOR
+    | VARS
     ;   
     
-CMD_FOR : TK_FOR '{' NOME_VAR '=' E ';' E ';' E '}' CMD
+CMD_FOR : TK_FOR '(' NOME_VAR '=' E ';' E ';' E ')' '{' CMD '}'
           { 
             string var_fim = gera_nome_var_temp( $2.t.tipo_base );
             string label_teste = gera_label( "teste_for" );
@@ -299,14 +322,14 @@ CMD_FOR : TK_FOR '{' NOME_VAR '=' E ';' E ';' E '}' CMD
           }
         ;
     
-CMD_IF : TK_IF '(' E ')'  CMD
+CMD_IF : TK_IF '(' E ')' '{' CMD '}'
          { $$ = gera_codigo_if( $2, $4.c, "" ); }  
        | TK_IF '(' E ')'  CMD TK_ELSE CMD
          { $$ = gera_codigo_if( $2, $4.c, $6.c ); }  
        ;
  
 
-WRITELN : TK_SYSO '(' E ')'
+PRINT : TK_SYSO '(' E ')' ';' CMD
           { $$.c = $3.c + 
                    "  cout << " + $3.v + ";\n"
                    "  cout << endl;\n";
@@ -447,6 +470,8 @@ void erro( string msg ) {
   fprintf( stderr, "Linha: %d, [%s]\n", nlinha, yytext );
   exit(1);
 }
+
+
 
 void inicializa_operadores() {
   // Resultados para o operador "+"
@@ -627,23 +652,6 @@ Atributos gera_codigo_if( Atributos expr, string cmd_then, string cmd_else ) {
   return ss;       
 }
 
-
-string traduz_nome_tipo_pascal( string tipo_pascal ) {
-  // No caso do Pascal, a comparacao deveria ser case-insensitive
-  
-  if( tipo_pascal == "Integer" )
-    return "i";
-  else if( tipo_pascal == "Boolean" )
-    return "b";
-  else if( tipo_pascal == "Real" )
-    return "d";  
-  else if( tipo_pascal == "Char" )
-    return "c";  
-  else if( tipo_pascal == "String" )
-    return "s";  
-  else 
-    erro( "Tipo inválido: " + tipo_pascal );
-}
 
 map<string, string> inicializaMapEmC() {
   map<string, string> aux;

@@ -34,6 +34,9 @@ COMMENT "(*"([^*]|"*"[^)])*"*)"
 "switch"       { yylval = Atributos( yytext ); return TK_DO; }
 "while"       { yylval = Atributos( yytext ); return TK_WHILE; }
 
+"static void main"      { yylval = Atributos( yytext ); return TK_MAIN; }
+
+
 
 "<="       { yylval = Atributos( yytext ); return TK_MEIG; }
 "=="       { yylval = Atributos( yytext ); return TK_IG; }
