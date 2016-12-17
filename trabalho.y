@@ -1,735 +1,583 @@
 %{
 #include <string.h>
-#include <iostream>
-#include <vector>
 #include <stdio.h>
 #include <stdlib.h>
+#include <iostream>
 #include <map>
+#include <vector>
 
 using namespace std;
 
-int yylex();
-void yyerror( const char* st );
-void erro( string msg );
-
-// Faz o mapeamento dos tipos dos operadores
-map< string, string > tipo_opr;
-
-// Pilha de variáveis temporárias para cada bloco
-vector< string > var_temp;
-
-#define MAX_DIM 2 
-
-enum TIPO { FUNCAO = -1, BASICO = 0, VETOR = 1, MATRIZ = 2 };
-
 struct Tipo {
-  string tipo_base;
-  TIPO ndim;
-  int inicio[MAX_DIM];
-  int fim[MAX_DIM];
-  vector<Tipo> retorno; // usando vector por dois motivos:
-  // 1) Para não usar ponteiros
-  // 2) Para ser genérico. Algumas linguagens permitem mais de um valor
-  //    de retorno.
-  vector<Tipo> params;
-  
-  Tipo() {} // Construtor Vazio
-
-  
-  Tipo( string tipo ) {
-    tipo_base = tipo;
-    ndim = BASICO;
-  }
-  
-  Tipo( string base, int inicio  ) {
-    tipo_base = base;
-    ndim = VETOR;
-    this->inicio[0] = inicio;
-  }
-  
-  Tipo( string base, int inicio, int fim  ) {
-    tipo_base = base;
-    ndim = MATRIZ;
-    this->inicio[0] = inicio;
-    this->fim[0] = fim;
-
-  }
-  
-  Tipo( Tipo retorno, vector<Tipo> params ) {
-    ndim = FUNCAO;
-    this->retorno.push_back( retorno );
-    this->params = params;
-  } 
+  string nome;  
+  string decl;  
+  string fmt;   
+  vector<int> dim;
 };
 
-struct Atributos {
-  string v, c; // Valor, tipo e código gerado.
+Tipo Integer = { "integer", "int", "d" };
+Tipo Float =   { "float", "float", "f" };
+Tipo Double =  { "double", "double", "lf" };
+Tipo String =  { "string", "char", "s" };
+Tipo Char =    { "char", "char", "c" };
+
+struct Atributo {
+  string v, c;
   Tipo t;
-  vector<string> lista_str; // Uma lista auxiliar de strings.
-  vector<Tipo> lista_tipo; // Uma lista auxiliar de tipos.
+  vector<string> lst;
+}; 
+
+#define YYSTYPE Atributo
+
+int yylex();
+int yyparse();
+void yyerror(const char *);
+void erro( string );
+
+map<string,Tipo> ts;
+map<string,Tipo> tsl;
+map< string, map< string, Tipo > > tro; // tipo_resultado_operacao;
+
+// contadores para variáveis temporariras
+map< string, int > temp_global;
+map< string, int > temp_local;
+map< string, int > nlabel;
+bool escopo_local = false;
+
+string toString( int n ) {
+  char buf[256] = "";
+  sprintf( buf, "%d", n );
   
-  Atributos() {} // Constutor vazio
-  Atributos( string valor ) {
-    v = valor;
+  return buf;
+}
+
+int toInt( string valor ) {
+  int aux = 0,i=0;
+
+  
+  i=sscanf( valor.c_str(), "%d", &aux );
+  if(i==0) return -1;
+  else return aux;
+}
+
+string gera_nome_var( Tipo t ) {
+  return "t_" + t.nome + "_" + 
+   toString( ++(escopo_local ? temp_local : temp_global)[t.nome] );
+}
+
+// 'Atributo&': o '&' significa passar por referência (modifica).
+void declara_variavel( Atributo& ss, 
+                       const Atributo& s1, const Atributo& s2, const string s3) {
+  ss.c = "";
+  if(escopo_local){
+  	for( int i = 0; i < s2.lst.size(); i++ ) {
+    	if( tsl.find( s2.lst[i] ) != tsl.end() ) 
+      	erro( "Variável já declarada: " + s2.lst[i] );
+    	else {
+        if(s1.t.nome==String.nome){
+          tsl[ s2.lst[i] ] = s1.t;
+      	  ss.c += s1.t.decl + " " + s2.lst[i]+ "["+toString(s1.t.dim[0]+1)+"]" + s3 + ";\n"; 
+        }
+        else{
+          tsl[ s2.lst[i] ] = s1.t;
+          ss.c += s1.t.decl + " " + s2.lst[i]+ s3 + ";\n"; 
+        }
+    	}  
+  	}
+	}
+	else{
+		for( int i = 0; i < s2.lst.size(); i++ ) {
+    	if( ts.find( s2.lst[i] ) != ts.end() ) 
+      	erro( "Variável já declarada: " + s2.lst[i] );
+    	else {
+      	if(s1.t.nome==String.nome){
+          ts[ s2.lst[i] ] = s1.t;
+          ss.c += s1.t.decl + " " + s2.lst[i]+ "["+toString(s1.t.dim[0]+1)+"]" + s3 + ";\n"; 
+        }
+        else{
+          ts[ s2.lst[i] ] = s1.t;
+          ss.c += s1.t.decl + " " + s2.lst[i]+ s3 + ";\n"; 
+        }
+    	}  
+  	}
+	}
+}
+
+string declara_nvar_temp( Tipo t, int qtde ) {
+  string aux = "";
+   
+  for( int i = 1; i <= qtde; i++ )
+    if(t.nome!=String.nome){
+      aux += t.decl + " t_" + t.nome + "_" + toString( i ) + ";\n";
+    }
+    else{
+      aux += t.decl + " t_" + t.nome + "_" + toString( i )+"["+toString(t.dim[0]+1)+"]"+ ";\n";
+    }
+    
+  return aux;  
+}
+
+string declara_var_temp( map< string, int >& temp ) {
+  string decls = 
+    declara_nvar_temp( Integer, temp[Integer.nome] ) +
+    declara_nvar_temp( Float, temp[Float.nome] ) +
+    declara_nvar_temp( Double, temp[Double.nome] ) +
+    declara_nvar_temp( String, temp[String.nome] ) +
+    declara_nvar_temp( Char, temp[Char.nome] )  +
+    "\n";
+  
+  temp.clear();
+  
+  return decls;
+}
+
+void gera_codigo_atribuicao( Atributo& ss, 
+                             const Atributo& s1, 
+                             const Atributo& s3 ) {
+  if( (s1.t.nome == s3.t.nome  || (s1.t.nome=="integer" && s3.t.nome=="float")|| (s1.t.nome=="float" && s3.t.nome=="double")
+  || (s1.t.nome=="double" && s3.t.nome=="float")|| (s1.t.nome=="float" && s3.t.nome=="integer")|| (s1.t.nome=="integer" && s3.t.nome=="double")
+  || (s1.t.nome=="double" && s3.t.nome=="integer")) && s1.t.nome!=String.nome )
+  {
+    ss.c = s1.c + s3.c + "  " + s1.v + " = " + s3.v + ";\n";
   }
-
-  Atributos( string valor, Tipo tipo ) {
-    v = valor;
-    t = tipo;
+  else if( s1.t.nome == s3.t.nome &&  s1.t.nome == String.nome) {
+    ss.c = s1.c + s3.c + "  " 
+           + "strncpy( " + s1.v + ", " + s3.v + ", " + 
+           toString( s1.t.dim[0]) + " );\n";
   }
-};
+}
 
-// Declarar todas as funções que serão usadas.
-void insere_var_ts( string nome_var, Tipo tipo );
-void insere_funcao_ts( string nome_func, Tipo retorno, vector<Tipo> params );
-Tipo consulta_ts( string nome_var );
-string declara_variavel( string nome, Tipo tipo );
-string declara_funcao( string nome, Tipo retorno, 
-                       vector<string> nomes, vector<Tipo> tipos );
+void gera1Dim(const Atributo& s2, const Atributo& s4){
+//comment
+	if(escopo_local){
+    for( int i = 0; i < s2.lst.size(); i++ ) {
+      tsl[s2.lst[i]].dim.push_back(toInt(s4.v));
+    }
+  }
+  else{//comment
+  	for( int i = 0; i < s2.lst.size(); i++ ) {
+      ts[s2.lst[i]].dim.push_back(toInt(s4.v));
+    }
+  }//comment
+}
 
-void empilha_ts();
-void desempilha_ts();
+void gera2Dim(const Atributo& s2, const Atributo& s4, const Atributo& s7){
+//comment
+	if(escopo_local){
+    for( int i = 0; i < s2.lst.size(); i++ ) {
+      tsl[s2.lst[i]].dim.push_back(toInt(s4.v));
+      tsl[s2.lst[i]].dim.push_back(toInt(s7.v));
+    }
+  }
+  else{//comment
+  	for( int i = 0; i < s2.lst.size(); i++ ) {
+      ts[s2.lst[i]].dim.push_back(toInt(s4.v));
+      ts[s2.lst[i]].dim.push_back(toInt(s7.v));
+    }
+  }//comment
+}
 
-string gera_nome_var_temp( string tipo );
-string gera_label( string tipo );
-string gera_teste_limite_array( string indice_1, Tipo tipoArray );
-string gera_teste_limite_array( string indice_1, string indice_2, 
-                                Tipo tipoArray );
+void busca_tipo_da_variavel( Atributo& ss, const Atributo& s1 ) {
+//comment
+	if(escopo_local){
+  	    if((tsl.find( s1.v ) == tsl.end()) && (ts.find( s1.v ) == ts.end()) ){
+    	    erro( "Variável não declarada: " + s1.v );
+        }
+  	    else {
+            if(tsl.find( s1.v ) == tsl.end()){
+                ss.t = ts[ s1.v ];
+            }
+            else{
+                ss.t = tsl[ s1.v ];
+            }            
+            ss.v = s1.v;
+  	    }
+	}
+	else{//comment
+		if( ts.find( s1.v ) == ts.end() ) {
+    	    erro( "Variável não declarada: " + s1.v );
+        }
+      	else {
+        	ss.t = ts[ s1.v ];
+        	ss.v = s1.v;
+      	}
+    }
+}
 
-void debug( string producao, Atributos atr );
-int toInt( string valor );
-string toString( int n );
+string par( Tipo a, Tipo b ) {
+  return a.nome + "," + b.nome;  
+}
+
+void gera_codigo_operador( Atributo& ss, const Atributo& s1, const Atributo& s2, const Atributo& s3) {
+  if( tro.find( s2.v ) != tro.end() ) {
+    if( tro[s2.v].find( par( s1.t, s3.t ) ) != tro[s2.v].end() ) {
+      ss.t = tro[s2.v][par( s1.t, s3.t )];
+      ss.v = gera_nome_var( ss.t );
+      if(ss.t.nome==String.nome){
+        ss.c = s1.c + s3.c + "  " +"strncpy("+ ss.v +","+  s1.v +","+toString(s1.t.dim[0])+");\n"+ "  strncat("+ss.v+"," + s3.v + 
+        ","+toString(s3.t.dim[0])+");\n";
+      }
+      else{
+        ss.c = s1.c + s3.c + "  " + ss.v + " = " + s1.v + s2.v + s3.v + ";\n";
+      }
+    }
+    else
+      erro( "O operador '" + s2.v + "' não está definido para os tipos " + s1.t.nome + " e " + s3.t.nome + "." );
+  }
+  else
+    erro( "Operador '" + s2.v + "' não definido." );
+}
+
+void gera_codigo_matrix(Atributo& ss, const Atributo& s1, const Atributo& s3, const Atributo& s6, const Atributo& s9){
+	string aux1, aux2, aux3, axu4; 
+	//Comment
+	if(escopo_local){
+  	if( (tsl.find( s1.v ) == tsl.end()) && (ts.find( s1.v ) == ts.end()) )
+    	erro( "Variável não declarada: " + s1.v );
+  	else if( s1.t.nome == s9.t.nome ){
+    	if((tsl[s1.v].dim[0]-1)<toInt(s3.v) || (tsl[s1.v].dim[1]-1)<toInt(s6.v)){
+      	erro("Acesso indevido ao Array\n");
+    	}
+    	aux1=gera_nome_var( Integer );
+    	ss.c=ss.c+"  "+aux1+" = "+ s3.v + '*' + toString(tsl[s1.v].dim[1])+";\n";
+    	aux2=gera_nome_var( Integer );
+    	ss.c=ss.c+"  "+aux2+ " = "+ aux1 +'+'+ s6.v+";\n";
+    	ss.c =s1.c + s3.c +ss.c+  "  " + s1.v + '[' + aux2 + ']' + " = " + s9.v + ";\n";    
+  	}
+  	else{
+    	erro("Tipo errado na atribuição");
+  	}
+	}
+	else{//Comment
+		if( ts.find( s1.v ) == ts.end() )
+    	erro( "Variável não declarada: " + s1.v );
+  	else if( s1.t.nome == s9.t.nome ){
+    	if((ts[s1.v].dim[0]-1)<toInt(s3.v) || (ts[s1.v].dim[1]-1)<toInt(s6.v)){
+      	erro("Acesso indevido ao Array\n");
+    	}
+    	aux1=gera_nome_var( Integer );
+    	ss.c=ss.c+"  "+aux1+" = "+ s3.v + '*' + toString(ts[s1.v].dim[1])+";\n";
+    	aux2=gera_nome_var( Integer );
+    	ss.c=ss.c+"  "+aux2+ " = "+ aux1 +'+'+ s6.v+";\n";
+    	ss.c =s1.c + s9.c +ss.c+  "  " + s1.v + '[' + aux2 + ']' + " = " + s9.v + ";\n";    
+  	}
+  	else{
+    	erro("Tipo errado na atribuição");
+  	}
+	}//Comment
+}
+
+void gera_codigo_vetor(Atributo& ss, const Atributo& s1, const Atributo& s3, const Atributo& s6){
+	//comment
+	if(escopo_local){
+		if((tsl.find( s1.v ) == tsl.end()) && (ts.find( s1.v ) == ts.end()))
+    	erro( "Variável não declarada: " + s1.v);
+ 		else if( s1.t.nome == s6.t.nome ){
+   		if((tsl[s1.v].dim[0]-1)<toInt(s3.v)){
+     		erro("Acesso indevido ao Array\n");
+    	}
+    ss.c =s1.c + s3.c +ss.c+  "  " + s1.v + '[' + s3.v + ']' + " = " + s6.v + ";\n";    
+  	}
+  	else{
+    	erro("Tipo errado na atribuição");
+  	}
+	}
+	else{//comment
+  	if(ts.find( s1.v ) == ts.end())
+    	erro( "Variável não declarada: " + s1.v);
+  	else if( s1.t.nome == s6.t.nome ){
+    	if((ts[s1.v].dim[0]-1)<toInt(s3.v)){
+      	erro("Acesso indevido ao Array\n");
+    	}
+    	ss.c =s1.c + s3.c +ss.c+  "  " + s1.v + '[' + s3.v + ']' + " = " + s6.v + ";\n";    
+  	}
+  	else{
+    	erro("Tipo errado na atribuição");
+  	}
+	}//comment
+}
+
+string gera_nome_label( string cmd ) {
+  return "L_" + cmd + "_" + toString( ++nlabel[cmd] );
+}
+
+void gera_cmd_if( Atributo& ss, const Atributo& exp, const Atributo& cmd_then, string cmd_else ) { 
+  string lbl_then = gera_nome_label( "then" );
+  string lbl_end_if = gera_nome_label( "end_if" );
+
+  if( exp.t.nome == String.nome || exp.t.nome == Char.nome)
+    erro( "A expressão do IF deve ser um numero!" );
+    
+  ss.c = exp.c + 
+         "\nif( " + exp.v + " ) goto " + lbl_then + ";\n" +
+         cmd_else + "  goto " + lbl_end_if + ";\n\n" +
+         lbl_then + ":;\n" + 
+         cmd_then.c + "\n" +
+         lbl_end_if + ":;\n"; 
+}
+
+void gera_cmd_for(Atributo& ss, const Atributo& s4, const Atributo& s6, const Atributo& s8, const Atributo& s11){
+	string lbl_inicio_for = gera_nome_label("inicio_for");								
+	string lbl_fim_for = gera_nome_label("fim_for");									
+
+	ss.c =  s4.c + "  " + lbl_inicio_for + ":;\n" + s6.c +
+			"  if (!(" + s6.v + ")) goto " + lbl_fim_for + ";\n" +s11.c +
+			"\n" + s8.c +
+			"\n  goto " + lbl_inicio_for + ";\n  " +
+			lbl_fim_for + ":;\n";
+}
+
+void gera_codigo_atomico(Atributo& ss,const Atributo& s1, const Atributo& s2){
+	string aux;
+	if(s1.t.nome==String.nome||s1.t.nome==Char.nome){
+		erro("Operação não permitida para esse tipo");
+	}
+	else{
+		aux=gera_nome_var(s1.t);
+		ss.c= "  " + aux + " = " + s1.v + ";\n";
+		ss.c= ss.c + "  " + s1.v + " = " + aux + " + 1; \n";
+	}
+}
+
+void gera_codigo_funcao(Atributo& ss,const Atributo& s2, const Atributo& s4, const Atributo& s7, const Atributo& s10){
+	ss.c=s2.t.decl+" "+s4.v+" ("+ s7.c +"){\n  "+declara_var_temp(temp_local)+"  "+s10.c+"}\n";
+}
 
 
-Atributos gera_codigo_operador( Atributos s1, string opr, Atributos s3 );
-Atributos gera_codigo_if( Atributos expr, string cmd_then, string cmd_else );
+void calcula_matrix( Atributo& ss, const Atributo& s1, const Atributo& s3, const Atributo& s6 ){
+	string aux1, aux2;
+	if(ts.find( s1.v ) == ts.end())
+    	erro( "Variável não declarada: " + s1.v);
+    	if((ts[s1.v].dim[0]-1)<toInt(s3.v)){
+      	erro("Acesso indevido ao Array\n");
+    	}
+    	ss.t=ts[s1.v];
+    	aux1=gera_nome_var( ss.t );
+    	ss.c="  "+aux1+" = "+ s3.v + '*' + toString(ts[s1.v].dim[1])+";\n";
+    	aux2=gera_nome_var( ss.t );
+    	ss.c=ss.c+"  "+aux2+ " = "+ aux1 +'+'+ s6.v+";\n";
+    	ss.c =s1.c + s3.c +ss.c + "\n"; 
+    	ss.v= s1.v + '[' + aux2 + ']';
+}
 
-string traduz_nome_tipo_pascal( string tipo_pascal );
+int gera_codigo_final(string codigo){
+  FILE* arq;
 
-string includes = 
-"#include <iostream>\n"
-"#include <stdio.h>\n"
-"#include <stdlib.h>\n"
-"#include <string.h>\n"
-"\n"
-"using namespace std;\n";
+  arq=fopen("saida.cc","w");
+  fprintf(arq, "%s",codigo.c_str());
+  fclose(arq);
+  return 0;
+}
 
-
-#define YYSTYPE Atributos
+void gera_input(Atributo& ss, const Atributo& s3){
+    if(s3.t.nome == "string"){
+        ss.c = "  scanf(\"%" +s3.t.fmt + "\", " + s3.v + ");\n" ;
+    }
+    else{
+        ss.c = "  scanf(\"%" +s3.t.fmt + "\", &" + s3.v + ");\n" ;
+    }
+}
 
 %}
 
 %token TK_ID TK_CINT TK_CDOUBLE TK_INT TK_DOUBLE TK_CHAR TK_BOOL
-%token TK_PRINT TK_CSTRING TK_STRING TK_ENDFUN
+%token TK_PRINT TK_CSTRING TK_STRING TK_INPUT TK_END TK_BEGINALL TK_ENDALL
 %token TK_MAIG TK_MEIG TK_IG TK_DIF TK_IF TK_ELSE TK_AND TK_OR
-%token TK_FOR TK_DO TK_WHILE TK_MAIN TK_SWITCH
+%token TK_FOR TK_DO TK_WHILE TK_MAIN  TK_PLUSPLUS TK_FUNCTION TK_MINUSMINUS
 
-%left TK_AND
-%nonassoc '<' '>' TK_MAIG TK_MEIG '=' TK_DIF 
+%left TK_AND TK_OR
+%nonassoc '<' '>' TK_MAIG TK_MEIG '=' TK_DIF TK_IG
 %left '+' '-'
-%left '*' '/' TK_MOD
+%left '*' '/' '%' TK_MOD
+
+%start S
 
 %%
 
-S : DECLS MAIN
-    {
-      cout << includes << endl;
-      cout << $1.c << endl;
-      cout << $2.c << endl;
-
-    }
+S : MIOLOS  ABRE PRINCIPAL FECHA
+  { cout << gera_codigo_final( "#include <stdlib.h>\n"
+                "#include <string.h>\n" 
+                "#include <stdio.h>\n\n" + declara_var_temp( temp_global ) + $1.c +"int main (){\n" +$3.c+"}")<<endl;
+  }
   ;
 
-TIPO    : TK_INT  { $$.t.tipo_base =  "i"; $$.v = $1.v; $$.c = "int"; }
-    | TK_DOUBLE   { $$.t.tipo_base = "d"; $$.v = $1.v; $$.c = "double"; }
-    | TK_BOOL   { $$.t.tipo_base = "b"; $$.v = $1.v; $$.c = "char"; }
-    | TK_CHAR   { $$.t.tipo_base = "c"; $$.v = $1.v; $$.c = "char"; }
-    | TK_STRING { $$.t.tipo_base = "s"; $$.v = $1.v; $$.c = "string"; }
-
-  
-DECLS : DECL DECLS
-        { $$.c = $1.c + $2.c; }
-      |
-        { $$.c = ""; }
-      ;  
-
-DECL : VARS
-       { $$.c = $1.c; }
-     | FUNCTION
+ABRE : TK_BEGINALL
      ;
-     
-FUNCTION :  CABECALHO ':' CORPO
-           { $$.c = $1.c + " {\n" + $3.c + " return Result;\n}\n";
-
-           }
-         ;
-
-
-
-
-CABECALHO : TIPO TK_ID '/' OPC_PARAM '/'
-            { 
-              Tipo tipo( $1.t.tipo_base  );
-              
-              $$.c = declara_funcao( $2.v, tipo, $3.lista_str, $3.lista_tipo );
-            }
-          ;
-          
-OPC_PARAM :  PARAMS
-            { $$.c = $1.c; }
-          |
-            { $$ = Atributos(); }
-          ;
-          
-PARAMS : PARAM '~' PARAMS
-         { $$.c = $1.c + $3.c; 
-           // Concatenar as listas.
-           $$.lista_tipo = $1.lista_tipo;
-           $$.lista_tipo.insert( $$.lista_tipo.end(), 
-                                 $3.lista_tipo.begin(),  
-                                 $3.lista_tipo.end() ); 
-           $$.lista_str = $1.lista_str;
-           $$.lista_str.insert( $$.lista_str.end(), 
-                                $3.lista_str.begin(),  
-                                $3.lista_str.end() ); 
-         }
-       | PARAM                  
-       ;  
-         
-PARAM : TIPO IDS
-      {
-        Tipo tipo = Tipo( $1.t.tipo_base  );
-        
-        $$ = Atributos();
-        $$.lista_str = $2.lista_str;
-        
-        for( int i = 0; i < $2.lista_str.size(); i ++ )
-          $$.lista_tipo.push_back( tipo );
-      }
-    | TIPO IDS '[' E ']'
-      {
-        Tipo tipo = Tipo( $1.t.tipo_base, toInt( $4.v ));
-        
-        $$ = Atributos();
-        $$.lista_str = $2.lista_str;
-        
-        for( int i = 0; i < $2.lista_str.size(); i ++ )
-          $$.lista_tipo.push_back( tipo );
-      }
-    ;
-          
-CORPO : VARS BLOCO
-        { $$.c = declara_variavel( "Result", consulta_ts( "Result" ) ) + ";\n" +
-                 $1.c + $2.c; }
-      | BLOCO
-        { $$.c = declara_variavel( "Result", consulta_ts( "Result" ) ) + ";\n" +
-                 $1.c; }
-      ;    
-     
-VARS : VAR '~' VARS
-       { $$.c = $1.c + $3.c; }
-     | 
-       { $$ = Atributos(); }
-     ;     
-     
-VAR : TIPO IDS '=' E
-      {
-        Tipo tipo = Tipo(  $1.t.tipo_base  );
-        
-        $$ = Atributos();
-        
-        for( int i = 0; i < $2.lista_str.size(); i ++ ) {
-          $$.c += declara_variavel( $2.lista_str[i], tipo ) + ";\n";
-          insere_var_ts( $2.lista_str[i], tipo );
-        }
-      }
-    | TIPO IDS '[' E ']'
-      {
-        Tipo tipo = Tipo(  $1.t.tipo_base ,
-                          toInt( $4.v ) );
-        
-        $$ = Atributos();
-        
-        for( int i = 0; i < $2.lista_str.size(); i ++ ) {
-          $$.c += declara_variavel( $2.lista_str[i], tipo ) + ";\n";
-          insere_var_ts( $2.lista_str[i], tipo );
-        }
-      }
-    ;
-
-IDS : IDS '=' TK_ID
-      { $$  = $1;
-        $$.lista_str.push_back( $3.v ); }
-    | TK_ID
-      { $$ = Atributos();
-        $$.lista_str.push_back( $1.v ); }
-    ;
-
-MAIN : TK_MAIN ':' BLOCO
-
-      { $$.c = "int main () { \n" + $3.c + "\n}";
-
-       }
+FECHA: TK_ENDALL
      ;
-     
-BLOCO : { var_temp.push_back( "" );} CMDS
-        { string vars = var_temp[var_temp.size()-1];
-          var_temp.pop_back();
-          $$.c = vars + $2.c; }
-      ;  
-      
-CMDS : CMD '~' CMDS
-       { $$.c = $1.c + $2.c; }
-     | { $$.c = ""; }
-     ;  
-     
-CMD : PRINT
-    | ATRIB 
-    | CMD_IF
-    | BLOCO
-    | CMD_FOR
-    ;   
-    
-CMD_FOR : TK_FOR '/' NOME_VAR '=' E '~' E '~' E TK_ENDFUN CMD
-          { 
-            string var_fim = gera_nome_var_temp( $3.t.tipo_base );
-            string label_teste = gera_label( "teste_for" );
-            string label_fim = gera_label( "fim_for" );
-            string condicao = gera_nome_var_temp( "b" );
-          
-            // Falta verificar os tipos... perde ponto se não o fizer.
-            $$.c =  $4.c + $6.c +
-                    "  " + $2.v + " = " + $4.v + ";\n" +
-                    "  " + var_fim + " = " + $6.v + ";\n" +
-                    label_teste + ":;\n" +
-                    "  " +condicao+" = "+$2.v + " > " + var_fim + ";\n" + 
-                    "  " + "if( " + condicao + " ) goto " + label_fim + 
-                    ";\n" +
-                    $8.c +
-                    "  " + $2.v + " = " + $2.v + " + 1;\n" +
-                    "  goto " + label_teste + ";\n" +
-                    label_fim + ":;\n";  
-          }
-        ;
-    
-CMD_IF : TK_IF '/' E TK_ENDFUN CMD
-         { $$ = gera_codigo_if( $3, $5.c, "" ); }
-       | TK_IF '/' E TK_ENDFUN CMD TK_ELSE ':' CMD
-         { $$ = gera_codigo_if( $3, $5.c, $8.c ); }
+   
+MIOLOS : MIOLO MIOLOS {$$.c = $1.c + $2.c;}
+       | {$$.c="";}
        ;
- 
+       
+MIOLO : DECL 		{$$=$1;}
+      | FUNCTION 	{$$=$1;}
+      ;     
 
-PRINT : TK_PRINT '/' E '/'
-          { $$.c = $3.c + 
-                   "  cout << " + $3.v + ";\n"
-                   "  cout << endl;\n";
-          }
-        ;
-  
-ATRIB : TK_ID '=' E
-        { // Falta verificar se pode atribuir (perde ponto se não fizer).
-          $1.t = consulta_ts( $1.v ) ;
+FUNC: FUNC_DECLS CMDS  {$$.c=$1.c + $2.c;}
+    ;
+
+FUNC_DECLS: FUNC_DECLS DECL {$$.c = $1.c + $2.c; }
+		      |
+		      ;
+
+DECL: TIPO ID ';'               
+		{ declara_variavel( $$, $1, $2,"" );}
+    | TIPO ID '[' TK_CINT ']''[' TK_CINT ']'  ';'
+    { declara_variavel( $$, $1, $2,'['+toString(toInt($4.v) *toInt($7.v))+']'); gera2Dim($2, $4, $7); }
+    | TIPO ID '[' TK_CINT ']' ';'
+    { declara_variavel( $$, $1, $2,'['+$4.v+']'); gera1Dim($2, $4);}
+    ;
+
+TIPO: TK_INT      { $$.t = Integer; }
+    | TK_DOUBLE   { $$.t = Double; }
+    | TK_CHAR     { $$.t = Char; }
+    | TK_STRING   { $$.t = String; }
+    ;
+
+ID: ID ',' TK_ID { $$.lst = $1.lst; $$.lst.push_back( $3.v ); }
+  | TK_ID  { $$.lst.push_back( $1.v ); }
+  ;
+
+FUNCTION: TIPO '<' TK_FUNCTION TK_ID {escopo_local=true; tsl.clear();}'('ARGS')''>' FUNC TK_END TK_FUNCTION '>'
+				{gera_codigo_funcao($$,$2, $4,$7,$10);	escopo_local=false; tsl.clear(); }
+				;
+
+ARGS: IDS {$$=$1;}
+    |  		{$$.c="";}
+    ;
+     
+IDS : TIPO TK_ID ',' IDS 	{$$.c=$1.t.decl + " " + $2.v+" , "+$4.c;}
+    | TIPO TK_ID 					{$$.c= $1.t.decl + " " + $2.v;}
+    ;      
+   
+PRINCIPAL : CMDS {$$=$1;}
+          ;
           
-          if( $1.t.tipo_base == "s" ) 
-            $$.c = $3.c + "  strncpy( " + $1.v + ", " + $3.v + ", 256 );\n";
-          else
-            $$.c = $3.c + "  " + $1.v + " = " + $3.v + ";\n"; 
-            
-          debug( "ATRIB : TK_ID TK_ATRIB E ';'", $$ );
-        } 
-      | TK_ID '[' E ']' '=' E
-        { // Falta testar: tipo, limite do array, e se a variável existe
-          $$.c = $3.c + $6.c +
-                 "  " + $1.v + "[" + $3.v + "] = " + $6.v + ";\n";
-        }  
-      ;   
+CMDS : CMD  CMDS {$$.c=$1.c+$2.c;}
+     | {$$.c="";}
+     ;                   
+ 
+CMD : SAIDA';'     		{$$=$1;}
+    | CMD_IF       		{$$=$1;}
+    | CMD_FOR      		{$$=$1;}
+    | CMD_ATRIB';'    {$$=$1;}
+    | CMD_ATOM';' 		{$$=$1;}
+    | CMDTK_INPUT';'		{$$=$1;}
+    ;
+    
+CMD_ATRIB : LVALUE '=' E 								{gera_codigo_atribuicao($$, $1, $3); }
+          | LVALUE '['E']''['E']' '=' E {gera_codigo_matrix($$,$1,$3,$6, $9);}
+          | LVALUE '['E']' '=' E 				{gera_codigo_vetor($$,$1,$3,$6);}
+          ;  
 
-E : E '+' E
-    { $$ = gera_codigo_operador( $1, "+", $3 ); }
-  | E '-' E 
-    { $$ = gera_codigo_operador( $1, "-", $3 ); }
-  | E '*' E
-    { $$ = gera_codigo_operador( $1, "*", $3 ); }
-  | E '%' E
-    { $$ = gera_codigo_operador( $1, "%", $3 ); }
-  | E '/' E
-    { $$ = gera_codigo_operador( $1, "/", $3 ); }
-  | E '<' E
-    { $$ = gera_codigo_operador( $1, "<", $3 ); }
-  | E '>' E
-    { $$ = gera_codigo_operador( $1, ">", $3 ); }
-  | E TK_MEIG E
-    { $$ = gera_codigo_operador( $1, "<=", $3 ); }
-  | E TK_MAIG E
-    { $$ = gera_codigo_operador( $1, ">=", $3 ); }
-  | E TK_IG E
-    { $$ = gera_codigo_operador( $1, "==", $3 ); }
-  | E TK_DIF E
-    { $$ = gera_codigo_operador( $1, "!=", $3 ); }
-  | E TK_AND E
-    { $$ = gera_codigo_operador( $1, "&&", $3 ); }
-  | E TK_OR E
-    { $$ = gera_codigo_operador( $1, "||", $3 ); }
-  | '(' E ')'
-    { $$ = $2; }
+CMD_ATOM: LVALUE TK_PLUSPLUS   {gera_codigo_atomico($$,$1,$2);}
+				| LVALUE TK_MINUSMINUS {gera_codigo_atomico($$,$1,$2);}
+				;
+
+LVALUE: TK_ID { busca_tipo_da_variavel( $$, $1 ); }
+      ;
+    
+CMD_FOR : '<'TK_FOR '('CMD_ATRIB';' E ';' CMD_ATOM ')''>' CMDS TK_END TK_FOR'>' {gera_cmd_for($$,$4,$6,$8,$11);}
+				| '<'TK_FOR '('CMD_ATRIB';' E ';' CMD_ATRIB ')''>' CMDS TK_END TK_FOR'>' {gera_cmd_for($$,$4,$6,$8,$11);}
+        ;    
+
+CMDTK_INPUT : TK_INPUT '(' LVALUE ')'		{ gera_input( $$, $3);}
+					;
+
+CMD_IF : '<'TK_IF '('E')' '>' CMDS TK_END TK_IF '>'             {gera_cmd_if( $$, $4, $7, "");}
+       | '<'TK_IF '('E')' '>' CMDS TK_ELSE CMDS  TK_END TK_IF '>' {gera_cmd_if( $$, $4, $7, $9.c);}
+       ;    
+    
+SAIDA : TK_PRINT '(' E ')'        { $$.c = $3.c + "  printf( \"%"+ $3.t.fmt + "\", " + $3.v + " );\n"; }
+      ;
+   
+E : E '+' E     		 { gera_codigo_operador( $$, $1, $2, $3 ); }
+  | E '-' E     		 { gera_codigo_operador( $$, $1, $2, $3 ); }
+  | E '*' E     		 { gera_codigo_operador( $$, $1, $2, $3 ); }
+  | E '/' E    			 { gera_codigo_operador( $$, $1, $2, $3 ); }
+  | E '%' E     	   { gera_codigo_operador( $$, $1, $2, $3 ); }
+  | E '>' E     		 { gera_codigo_operador( $$, $1, $2, $3 ); }
+  | E '<' E     		 { gera_codigo_operador( $$, $1, $2, $3 ); }
+  | E TK_IG E   { gera_codigo_operador( $$, $1, $2, $3 ); }
+  | E TK_DIF E   { gera_codigo_operador( $$, $1, $2, $3 ); }
+  | E TK_MAIG E  { gera_codigo_operador( $$, $1, $2, $3 ); }
+  | E TK_MEIG E  { gera_codigo_operador( $$, $1, $2, $3 ); }
   | F
   ;
   
-F : TK_CINT 
-    { $$.v = $1.v; $$.t = Tipo( "i" ); $$.c = $1.c; }
-  | TK_CDOUBLE
-    { $$.v = $1.v; $$.t = Tipo( "d" ); $$.c = $1.c; }
-  | TK_CSTRING
-    { $$.v = $1.v; $$.t = Tipo( "s" ); $$.c = $1.c; }
-  | TK_ID '[' E ']'  
-    { 
-      Tipo tipoArray = consulta_ts( $1.v );
-      $$.t = Tipo( tipoArray.tipo_base );
-      if( tipoArray.ndim != 1 )
-        erro( "Variável " + $1.v + " não é array de uma dimensão" );
-        
-      if( $3.t.ndim != 0 || $3.t.tipo_base != "i" )
-        erro( "Indice de array deve ser integer de zero dimensão: " +
-              $3.t.tipo_base + "/" + toString( $3.t.ndim ) );
-        
-      $$.v = gera_nome_var_temp( $$.t.tipo_base );
-      $$.c = $3.c +
-             gera_teste_limite_array( $3.v, tipoArray ) +   
-             "  " + $$.v + " = " + $1.v + "[" + $3.v + "];\n";
-    }
-  | TK_ID '[' E ']' '[' E ']'
-    {
-      // Implementar: vai criar uma temporaria int para o índice e 
-      // outra do tipoBase do array para o valor recuperado.
-    } 
-  | TK_ID 
-    { $$.v = $1.v; $$.t = consulta_ts( $1.v ); $$.c = $1.c; }  
-  | TK_ID '(' EXPRS ')' 
-    { $$.t = Tipo( "i" ); // consulta_ts( $1.v );
-    // Falta verficar o tipo da função e os parametros.
-      $$.v = gera_nome_var_temp( $$.t.tipo_base ); 
-      $$.c = $3.c + "  " + $$.v + " = " + $1.v + "( ";
-      
-      for( int i = 0; i < $3.lista_str.size() - 1; i++ )
-        $$.c += $3.lista_str[i] + ", ";
-        
-      $$.c += $3.lista_str[$3.lista_str.size()-1] + " );\n"; 
-    } 
-  ;
-  
-  
-EXPRS : EXPRS ',' E
-        { $$ = Atributos();
-          $$.c = $1.c + $3.c;
-          $$.lista_str = $1.lista_str;
-          $$.lista_str.push_back( $3.v ); }
-      | E 
-        { $$ = Atributos();
-          $$.c = $1.c;
-          $$.lista_str.push_back( $1.v ); }
-      ;  
-  
-NOME_VAR : TK_ID 
-           { $$.v = $1.v; $$.t = consulta_ts( $1.v ); $$.c = $1.c; }
-         ; 
-  
+F : TK_CSTRING   		 { $$ = $1; $$.t = String; }
+  | TK_CINT  		 { $$ = $1; $$.t = Integer; }
+  | TK_ID           		 { busca_tipo_da_variavel( $$, $1 );  }
+  | TK_ID '['E']''['E']' { calcula_matrix( $$, $1, $3, $6 );  }
+  | TK_ID '['E']'        { $$.v = $1.v + "[" +$3.v +"]"+";\n";  }
+  | '('E')'       		 { $$ = $2; }
+  ;     
+ 
 %%
-int nlinha = 1;
 
 #include "lex.yy.c"
 
-int yyparse();
+void inicializa_tabela_de_resultado_de_operacoes() {
+  map< string, Tipo > r;
+  
+  // OBS: a ordem é muito importante!!  
+  r[par(Integer, Integer)] = Integer;    
+  tro[ "%" ] = r;    
+  
+  r[par(Integer, Float)] = Float;    
+  r[par(Integer, Double)] = Double;    
+  r[par(Float, Integer)] = Float;    
+  r[par(Float, Float)] = Float;    
+  r[par(Float, Double)] = Double;    
+  r[par(Double, Integer)] = Double;    
+  r[par(Double, Float)] = Double;    
+  r[par(Double, Double)] = Double;    
 
-void debug( string producao, Atributos atr ) {
-/*
-  cerr << "Debug: " << producao << endl;
-  cerr << "  t: " << atr.t << endl;
-  cerr << "  v: " << atr.v << endl;
-  cerr << "  c: " << atr.c << endl;
-*/ 
+  tro[ "-" ] = r; 
+  tro[ "*" ] = r; 
+  tro[ "/" ] = r; 
+
+  r[par(Char, Char)] = String;      
+  r[par(String, Char)] = String;      
+  r[par(Char, String)] = String;    
+  r[par(String, String)] = String;    
+  tro[ "+" ] = r; 
+  
+  r.clear();
+  r[par(Integer, Integer)] = Integer; 
+  r[par(Float, Float)] = Integer;    
+  r[par(Float, Double)] = Integer;    
+  r[par(Double, Float)] = Integer;    
+  r[par(Double, Double)] = Integer;    
+  r[par(Char, Char)] = Integer;      
+  r[par(String, String)] = Integer;      
+  tro["=="] = r;
+  tro["!="] = r;
+  tro[">="] = r;
+  tro[">"] = r;
+  tro["<"] = r;
+  tro["<="] = r;
+}
+
+void erro( string st ) {
+  yyerror( st.c_str() );
+  exit( 1 );
 }
 
 void yyerror( const char* st )
 {
-  fprintf(stderr, "%s", st );
-  fprintf(stderr, "\nLinha: %d, \"%s\"\n", nlinha, yytext );
-}
-
-void erro( string msg ) {
-  cerr << "Erro: " << msg << endl; 
-  fprintf( stderr, "Linha: %d, [%s]\n", nlinha, yytext );
-  exit(1);
-}
-
-
-
-void inicializa_operadores() {
-  // Resultados para o operador "+"
-  tipo_opr["i+i"] = "i";
-  tipo_opr["i+d"] = "d";
-  tipo_opr["d+i"] = "d";
-  tipo_opr["d+d"] = "d";
-  tipo_opr["s+s"] = "s";
-  tipo_opr["c+s"] = "s";
-  tipo_opr["s+c"] = "s";
-  tipo_opr["c+c"] = "s";
- 
-  // Resultados para o operador "-"
-  tipo_opr["i-i"] = "i";
-  tipo_opr["i-d"] = "d";
-  tipo_opr["d-i"] = "d";
-  tipo_opr["d-d"] = "d";
-  
-  // Resultados para o operador "*"
-  tipo_opr["i*i"] = "i";
-  tipo_opr["i*d"] = "d";
-  tipo_opr["d*i"] = "d";
-  tipo_opr["d*d"] = "d";
-  
-  // Resultados para o operador "/"
-  tipo_opr["i/i"] = "d";
-  tipo_opr["i/d"] = "d";
-  tipo_opr["d/i"] = "d";
-  tipo_opr["d/d"] = "d";
-  
-  // Resultados para o operador "%"
-  tipo_opr["i%i"] = "i";
-  
-  // Resultados para o operador "<"
-  tipo_opr["i<i"] = "b";
-  tipo_opr["i<d"] = "b";
-  tipo_opr["d<i"] = "b";
-  tipo_opr["d<d"] = "b";
-  tipo_opr["c<c"] = "b";
-  tipo_opr["i<c"] = "b";
-  tipo_opr["c<i"] = "b";
-//  tipo_opr["c<s"] = "b";
-//  tipo_opr["s<c"] = "b";
-//  tipo_opr["s<s"] = "b";
-
-  // Resultados para o operador "And"
-  tipo_opr["b&&b"] = "b";
-  
-  // Resultados para o operador "="
-  tipo_opr["i==i"] = "b";
-  tipo_opr["i==d"] = "b";
-  tipo_opr["d==i"] = "b";
-  tipo_opr["d==d"] = "b";
-}
-
-// Uma tabela de símbolos para cada escopo
-vector< map< string, Tipo > > ts;
-
-void empilha_ts() {
-  map< string, Tipo > novo;
-  ts.push_back( novo );
-}
-
-void desempilha_ts() {
-  ts.pop_back();
-}
-
-Tipo consulta_ts( string nome_var ) {
-  for( int i = ts.size()-1; i >= 0; i-- )
-    if( ts[i].find( nome_var ) != ts[i].end() )
-      return ts[i][ nome_var ];
-    
-  erro( "Variável não declarada: " + nome_var );
-  
-  return Tipo();
-}
-
-void insere_var_ts( string nome_var, Tipo tipo ) {
-  if( ts[ts.size()-1].find( nome_var ) != ts[ts.size()-1].end() )
-    erro( "Variável já declarada: " + nome_var + 
-          " (" + ts[ts.size()-1][ nome_var ].tipo_base + ")" );
-    
-  ts[ts.size()-1][ nome_var ] = tipo;
-}
-
-void insere_funcao_ts( string nome_func, 
-                       Tipo retorno, vector<Tipo> params ) {
-  if( ts[ts.size()-2].find( nome_func ) != ts[ts.size()-2].end() )
-    erro( "Função já declarada: " + nome_func );
-    
-  ts[ts.size()-2][ nome_func ] = Tipo( retorno, params );
-}
-
-string toString( int n ) {
-  char buff[100];
-  
-  sprintf( buff, "%d", n ); 
-  
-  return buff;
-}
-
-int toInt( string valor ) {
-  int aux = -1;
-  
-  if( sscanf( valor.c_str(), "%d", &aux ) != 1 )
-    erro( "Numero inválido: " + valor );
-  
-  return aux;
-}
-string gera_nome_var_temp( string tipo ) {
-  static int n = 0;
-  string nome = "t" + tipo + "_" + toString( ++n );
-  
-  var_temp[var_temp.size()-1] += declara_variavel( nome, Tipo( tipo ) ) + ";\n";
-  
-  return nome;
-}
-
-string gera_label( string tipo ) {
-  static int n = 0;
-  string nome = "l_" + tipo + "_" + toString( ++n );
-  
-  return nome;
-}
-
-Tipo tipo_resultado( Tipo t1, string opr, Tipo t3 ) {
-  if( t1.ndim == 0 && t3.ndim == 0 ) {
-    string aux = tipo_opr[ t1.tipo_base + opr + t3.tipo_base ];
-  
-    if( aux == "" ) 
-      erro( "O operador " + opr + " não está definido para os tipos '" +
-            t1.tipo_base + "' e '" + t3.tipo_base + "'.");
-  
-    return Tipo( aux );
-  }
-  else { // Testes para os operadores de comparacao de array
-    return Tipo();
-  }  
-} 
-
-Atributos gera_codigo_operador( Atributos s1, string opr, Atributos s3 ) {
-  Atributos ss;
-  
-  ss.t = tipo_resultado( s1.t, opr, s3.t );
-  ss.v = gera_nome_var_temp( ss.t.tipo_base );
-  
-  if( s1.t.tipo_base == "s" && s3.t.tipo_base == "s" ) 
-    // falta testar se é o operador "+"
-    ss.c = s1.c + s3.c + // Codigo das expressões dos filhos da arvore.
-           "  strncpy( " + ss.v + ", " + s1.v + ", 256 );\n" +
-           "  strncat( " + ss.v + ", " + s3.v + ", 256 );\n";
-  else if( s1.t.tipo_base == "s" && s3.t.tipo_base == "c" ) 
-    ;
-  else if( s1.t.tipo_base == "c" && s3.t.tipo_base == "s" ) 
-    ;
-  else
-    ss.c = s1.c + s3.c + // Codigo das expressões dos filhos da arvore.
-           "  " + ss.v + " = " + s1.v + " " + opr + " " + s3.v + ";\n"; 
-  
-  debug( "E: E " + opr + " E", ss );
-  return ss;
-}
-
-Atributos gera_codigo_if( Atributos expr, string cmd_then, string cmd_else ) {
-  Atributos ss;
-  string label_else = gera_label( "else" );
-  string label_end = gera_label( "end" );
-  
-  ss.c = expr.c + 
-         "  " + expr.v + " = !" + expr.v + ";\n\n" +
-         "  if( " + expr.v + " ) goto " + label_else + ";\n" +
-         cmd_then +
-         "  goto " + label_end + ";\n" +
-         label_else + ":;\n" +
-         cmd_else +
-         label_end + ":;\n";
-         
-  return ss;       
-}
-
-
-map<string, string> inicializaMapEmC() {
-  map<string, string> aux;
-  aux["i"] = "int ";
-  aux["b"] = "int ";
-  aux["d"] = "double ";
-  aux["c"] = "char ";
-  aux["s"] = "char ";
-  return aux;
-}
-
-string declara_funcao( string nome, Tipo tipo, 
-                       vector<string> nomes, vector<Tipo> tipos ) {
-  static map<string, string> em_C = inicializaMapEmC();
-  
-  if( em_C[ tipo.tipo_base ] == "" ) 
-    erro( "Tipo inválido: " + tipo.tipo_base );
-    
-  insere_var_ts( "Result", tipo );  
-    
-  if( nomes.size() != tipos.size() )
-    erro( "Bug no compilador! Nomes e tipos de parametros diferentes." );
-      
-  string aux = "";
-  
-  for( int i = 0; i < nomes.size(); i++ ) {
-    aux += declara_variavel( nomes[i], tipos[i] ) + 
-           (i == nomes.size()-1 ? " " : ", ");  
-    insere_var_ts( nomes[i], tipos[i] );  
-  }
-      
-  return em_C[ tipo.tipo_base ] + " " + nome + "(" + aux + ")";
-}
-
-string declara_variavel( string nome, Tipo tipo ) {
-  static map<string, string> em_C = inicializaMapEmC();
-  
-  if( em_C[ tipo.tipo_base ] == "" ) 
-    erro( "Tipo inválido: " + tipo.tipo_base );
-    
-  string indice;
-   
-  switch( tipo.ndim ) {
-    case 0: indice = (tipo.tipo_base == "s" ? "[256]" : "");
-            break;
-              
-    case 1: indice = "[" + toString( 
-                  (tipo.fim[0]-tipo.inicio[0]+1) *  
-                  (tipo.tipo_base == "s" ? 256 : 1)
-                ) + "]";
-            break; 
-            
-    case 2:
-            break;
-    
-    default:
-       erro( "Bug muito sério..." );
-  } 
-  
-  return em_C[ tipo.tipo_base ] + nome + indice;
-}
-
-string gera_teste_limite_array( string indice_1, Tipo tipoArray ) {
-  string var_teste_inicio = gera_nome_var_temp( "b" );
-  string var_teste_fim = gera_nome_var_temp( "b" );
-  string var_teste = gera_nome_var_temp( "b" );
-  string label_end = gera_label( "limite_array_ok" );
-
-  string codigo = "  " + var_teste_inicio + " = " + indice_1 + " >= " +
-                  toString( tipoArray.inicio[0] ) + ";\n" +
-                  "  " + var_teste_fim + " = " + indice_1 + " <= " +
-                  toString( tipoArray.fim[0] ) + ";\n" +
-                  "  " + var_teste + " = " + var_teste_inicio + " && " + 
-                                             var_teste_fim + ";\n";
-                                             
-  codigo += "  if( " + var_teste + " ) goto " + label_end + ";\n" +
-          "    printf( \"Limite de array ultrapassado: %d <= %d <= %d\", "+
-               toString( tipoArray.inicio[0] ) + " ," + indice_1 + ", " +
-               toString( tipoArray.fim[0] ) + " );\n" +
-               "  cout << endl;\n" + 
-               "  exit( 1 );\n" + 
-            "  " + label_end + ":;\n";
-  
-  return codigo;
+   if( strlen( yytext ) == 0 )
+     printf( "%s\nNo final do arquivo\n", st );
+   else  
+     printf( "%s\nProximo a: %s\nlinha/coluna: %d/%d\n", st, 
+             yytext, yylineno, yyrowno - (int) strlen( yytext ) );
 }
 
 int main( int argc, char* argv[] )
 {
-  inicializa_operadores();
+  String.dim.push_back(255);
+  inicializa_tabela_de_resultado_de_operacoes();
   yyparse();
 }
+
