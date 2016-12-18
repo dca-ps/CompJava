@@ -18,12 +18,16 @@ DOUBLE		double
 CHAR		char
 STRING		string
 VOID        void
+BOOL        bool
 IF		    si
 ELSE		"<"sinão">"
 FOR		    para
 FUNCTION	funcao
 PRINT		escrevi
 INPUT       le
+WHILE       enquanto
+DOWHILE     facaenquanto
+SWITCH      interruptor
 
 CSTRING	"\""([^"\n]|"''")*"\""
 CDOUBLE	({DIGITO}+)"."{DIGITO}+

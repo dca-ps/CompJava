@@ -16,11 +16,11 @@ struct Tipo {
 };
 
 Tipo Integer = { "integer", "int", "d" };
-Tipo Float =   { "float", "float", "f" };
 Tipo Double =  { "double", "double", "lf" };
 Tipo String =  { "string", "char", "s" };
 Tipo Char =    { "char", "char", "c" };
 Tipo Void =    { "void", "void", " "};
+Tipo Boolean = { "boolean", "bool", "" };
 
 struct Atributo {
   string v, c;
@@ -122,7 +122,7 @@ string declara_nvar_temp( Tipo t, int qtde ) {
 string declara_var_temp( map< string, int >& temp ) {
   string decls = 
     declara_nvar_temp( Integer, temp[Integer.nome] ) +
-    declara_nvar_temp( Float, temp[Float.nome] ) +
+    declara_nvar_temp( Boolean, temp[Boolean.nome] ) +
     declara_nvar_temp( Double, temp[Double.nome] ) +
     declara_nvar_temp( String, temp[String.nome] ) +
     declara_nvar_temp( Char, temp[Char.nome] )  +
@@ -329,6 +329,17 @@ void gera_cmd_for(Atributo& ss, const Atributo& s4, const Atributo& s6, const At
 			lbl_fim_for + ":;\n";
 }
 
+void gera_cmd_while(Atributo& ss, const Atributo& s4, const Atributo& s7){
+    string lbl_inicio_while = gera_nome_label("inicio_while");
+    string lbl_fim_while = gera_nome_label("fim_while");
+
+    ss.c =  s4.c + "  " + lbl_inicio_while + ":;\n" + s7.c +
+            "  if (!(" + s4.v + ")) goto " + lbl_fim_while + ";\n" +
+            "\n" +
+            "\n  goto " + lbl_inicio_while + ";\n  " +
+            lbl_fim_while + ":;\n";
+}
+
 void gera_codigo_atomico(Atributo& ss,const Atributo& s1, const Atributo& s2){
 	string aux;
 	if(s1.t.nome==String.nome||s1.t.nome==Char.nome){
@@ -389,7 +400,8 @@ void gera_chamada(Atributo& ss, const Atributo& s1, const Atributo& s3) {
 %token TK_ID TK_CINT TK_CDOUBLE TK_INT TK_DOUBLE TK_CHAR TK_BOOL TK_VOID
 %token TK_PRINT TK_CSTRING TK_STRING TK_INPUT TK_END TK_BEGINALL TK_ENDALL
 %token TK_MAIG TK_MEIG TK_IG TK_DIF TK_IF TK_ELSE TK_AND TK_OR
-%token TK_FOR TK_DO TK_WHILE TK_MAIN  TK_PLUSPLUS TK_FUNCTION TK_MINUSMINUS
+%token TK_FOR TK_DO TK_WHILE TK_MAIN TK_PLUSPLUS TK_FUNCTION TK_MINUSMINUS
+%token TK_DOWHILE TK_SWITCH
 
 %left TK_AND TK_OR
 %nonassoc '<' '>' TK_MAIG TK_MEIG '=' TK_DIF TK_IG
@@ -478,6 +490,7 @@ CMD : SAIDA';'     		{$$=$1;}
     | CMD_ATOM';' 		{$$=$1;}
     | CMDTK_INPUT';'		{$$=$1;}
     | CMD_FUNC';'       {$$=$1;}
+    | CMD_WHILE';'      {$$=$1;}
     ;
     
 CMD_ATRIB : LVALUE '=' E 								{gera_codigo_atribuicao($$, $1, $3); }
@@ -493,7 +506,7 @@ LVALUE: TK_ID { busca_tipo_da_variavel( $$, $1 ); }
       ;
     
 CMD_FOR : '<'TK_FOR '('CMD_ATRIB';' E ';' CMD_ATOM ')''>' CMDS TK_END TK_FOR'>' {gera_cmd_for($$,$4,$6,$8,$11);}
-				| '<'TK_FOR '('CMD_ATRIB';' E ';' CMD_ATRIB ')''>' CMDS TK_END TK_FOR'>' {gera_cmd_for($$,$4,$6,$8,$11);}
+        | '<'TK_FOR '('CMD_ATRIB';' E ';' CMD_ATRIB ')''>' CMDS TK_END TK_FOR'>' {gera_cmd_for($$,$4,$6,$8,$11);}
         ;    
 
 CMDTK_INPUT : TK_INPUT '(' LVALUE ')'		{ gera_input( $$, $3);}
@@ -505,7 +518,10 @@ CMD_FUNC : TK_ID '(' LVALUE ')'             { gera_chamada($$, $1, $3);}
 
 CMD_IF : '<'TK_IF '('E')' '>' CMDS TK_END TK_IF '>'             {gera_cmd_if( $$, $4, $7, "");}
        | '<'TK_IF '('E')' '>' CMDS TK_ELSE CMDS  TK_END TK_IF '>' {gera_cmd_if( $$, $4, $7, $9.c);}
-       ;    
+       ;
+
+CMD_WHILE : '<'TK_WHILE '(' E ')' '>' CMDS TK_END TK_WHILE '>'  {gera_cmd_while($$, $4, $7);}
+          ;
     
 SAIDA : TK_PRINT '(' F ')'        { $$.c = $3.c + "  printf( \"%"+ $3.t.fmt + "\", " + $3.v + " );\n"; }
       ;
@@ -541,15 +557,11 @@ void inicializa_tabela_de_resultado_de_operacoes() {
   
   // OBS: a ordem é muito importante!!  
   r[par(Integer, Integer)] = Integer;    
-  tro[ "%" ] = r;    
-  
-  r[par(Integer, Float)] = Float;    
-  r[par(Integer, Double)] = Double;    
-  r[par(Float, Integer)] = Float;    
-  r[par(Float, Float)] = Float;    
-  r[par(Float, Double)] = Double;    
-  r[par(Double, Integer)] = Double;    
-  r[par(Double, Float)] = Double;    
+  tro[ "%" ] = r;
+
+  r[par(Integer, Integer)] = Integer;
+  r[par(Integer, Double)] = Double;
+  r[par(Double, Integer)] = Double;
   r[par(Double, Double)] = Double;    
 
   tro[ "-" ] = r; 
@@ -563,13 +575,11 @@ void inicializa_tabela_de_resultado_de_operacoes() {
   tro[ "+" ] = r; 
   
   r.clear();
-  r[par(Integer, Integer)] = Integer; 
-  r[par(Float, Float)] = Integer;    
-  r[par(Float, Double)] = Integer;    
-  r[par(Double, Float)] = Integer;    
-  r[par(Double, Double)] = Integer;    
-  r[par(Char, Char)] = Integer;      
-  r[par(String, String)] = Integer;      
+  r[par(Integer, Integer)] = Boolean;
+  r[par(Double, Double)] = Boolean;
+  r[par(Char, Char)] = Boolean;
+  r[par(String, String)] = Boolean;
+  r[par(Boolean, Boolean)] = Boolean;
   tro["=="] = r;
   tro["!="] = r;
   tro[">="] = r;
