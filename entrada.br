@@ -1,3 +1,18 @@
+int a;
+double q;
+char p[5];
+double jdahngjd;
+
+void <funcao bla(int a)>
+    int b;
+    <si (b == 0)>
+        escrevi(b);
+    <fimsi>
+    b = 5*(b+b);
+<fimfuncao>
+
 <comecatudo>
-    escrevi("Hello word");
+    int d;
+    escrevi("foudasci");
+    bla(d);
 <fimtudo>

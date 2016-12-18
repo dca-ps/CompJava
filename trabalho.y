@@ -20,6 +20,7 @@ Tipo Float =   { "float", "float", "f" };
 Tipo Double =  { "double", "double", "lf" };
 Tipo String =  { "string", "char", "s" };
 Tipo Char =    { "char", "char", "c" };
+Tipo Void =    { "void", "void", " "};
 
 struct Atributo {
   string v, c;
@@ -36,7 +37,8 @@ void erro( string );
 
 map<string,Tipo> ts;
 map<string,Tipo> tsl;
-map< string, map< string, Tipo > > tro; // tipo_resultado_operacao;
+map< string, map< string, Tipo > > tro;// tipo_resltado_operacao;
+map<string, vector<Tipo>> funcoes;
 
 // contadores para variáveis temporariras
 map< string, int > temp_global;
@@ -339,8 +341,8 @@ void gera_codigo_atomico(Atributo& ss,const Atributo& s1, const Atributo& s2){
 	}
 }
 
-void gera_codigo_funcao(Atributo& ss,const Atributo& s2, const Atributo& s4, const Atributo& s7, const Atributo& s10){
-	ss.c=s2.t.decl+" "+s4.v+" ("+ s7.c +"){\n  "+declara_var_temp(temp_local)+"  "+s10.c+"}\n";
+void gera_codigo_funcao(Atributo& ss,const Atributo& s1, const Atributo& s4, const Atributo& s7, const Atributo& s10){
+	ss.c=s1.t.decl+" "+s4.v+" ("+ s7.c +"){\n  "+declara_var_temp(temp_local)+"  "+s10.c+"}\n";
 }
 
 
@@ -378,9 +380,13 @@ void gera_input(Atributo& ss, const Atributo& s3){
     }
 }
 
+void gera_chamada(Atributo& ss, const Atributo& s1, const Atributo& s3) {
+    ss.c = s1.v + "(" + s3.v + ");\n" ;
+}
+
 %}
 
-%token TK_ID TK_CINT TK_CDOUBLE TK_INT TK_DOUBLE TK_CHAR TK_BOOL
+%token TK_ID TK_CINT TK_CDOUBLE TK_INT TK_DOUBLE TK_CHAR TK_BOOL TK_VOID
 %token TK_PRINT TK_CSTRING TK_STRING TK_INPUT TK_END TK_BEGINALL TK_ENDALL
 %token TK_MAIG TK_MEIG TK_IG TK_DIF TK_IF TK_ELSE TK_AND TK_OR
 %token TK_FOR TK_DO TK_WHILE TK_MAIN  TK_PLUSPLUS TK_FUNCTION TK_MINUSMINUS
@@ -418,8 +424,12 @@ FUNC: FUNC_DECLS CMDS  {$$.c=$1.c + $2.c;}
     ;
 
 FUNC_DECLS: FUNC_DECLS DECL {$$.c = $1.c + $2.c; }
-		      |
-		      ;
+          | {$$.c = "";}
+          ;
+
+MAIN_DECLS: MAIN_DECLS DECL {$$.c = $1.c + $2.c;}
+          | {$$.c = "";}
+          ;
 
 DECL: TIPO ID ';'               
 		{ declara_variavel( $$, $1, $2,"" );}
@@ -433,15 +443,18 @@ TIPO: TK_INT      { $$.t = Integer; }
     | TK_DOUBLE   { $$.t = Double; }
     | TK_CHAR     { $$.t = Char; }
     | TK_STRING   { $$.t = String; }
+
     ;
 
 ID: ID ',' TK_ID { $$.lst = $1.lst; $$.lst.push_back( $3.v ); }
   | TK_ID  { $$.lst.push_back( $1.v ); }
   ;
 
-FUNCTION: TIPO '<' TK_FUNCTION TK_ID {escopo_local=true; tsl.clear();}'('ARGS')''>' FUNC TK_END TK_FUNCTION '>'
-				{gera_codigo_funcao($$,$2, $4,$7,$10);	escopo_local=false; tsl.clear(); }
-				;
+FUNCTION: TIPO '<' TK_FUNCTION TK_ID {escopo_local=true; tsl.clear();}'(' ARGS ')' '>' FUNC TK_END TK_FUNCTION '>'
+				{gera_codigo_funcao($$,$1, $4,$7,$10);	escopo_local=false; tsl.clear(); }
+        | TK_VOID '<' TK_FUNCTION TK_ID {escopo_local=true; tsl.clear();}'(' ARGS ')' '>' FUNC TK_END TK_FUNCTION '>'
+                {gera_codigo_funcao($$,$1, $4,$7,$10);	escopo_local=false; tsl.clear(); }
+;
 
 ARGS: IDS {$$=$1;}
     |  		{$$.c="";}
@@ -451,7 +464,7 @@ IDS : TIPO TK_ID ',' IDS 	{$$.c=$1.t.decl + " " + $2.v+" , "+$4.c;}
     | TIPO TK_ID 					{$$.c= $1.t.decl + " " + $2.v;}
     ;      
    
-PRINCIPAL : CMDS {$$=$1;}
+PRINCIPAL : MAIN_DECLS CMDS {$$.c=$1.c+$2.c;}
           ;
           
 CMDS : CMD  CMDS {$$.c=$1.c+$2.c;}
@@ -464,6 +477,7 @@ CMD : SAIDA';'     		{$$=$1;}
     | CMD_ATRIB';'    {$$=$1;}
     | CMD_ATOM';' 		{$$=$1;}
     | CMDTK_INPUT';'		{$$=$1;}
+    | CMD_FUNC';'       {$$=$1;}
     ;
     
 CMD_ATRIB : LVALUE '=' E 								{gera_codigo_atribuicao($$, $1, $3); }
@@ -483,13 +497,17 @@ CMD_FOR : '<'TK_FOR '('CMD_ATRIB';' E ';' CMD_ATOM ')''>' CMDS TK_END TK_FOR'>' 
         ;    
 
 CMDTK_INPUT : TK_INPUT '(' LVALUE ')'		{ gera_input( $$, $3);}
-					;
+            ;
+
+CMD_FUNC : TK_ID '(' LVALUE ')'             { gera_chamada($$, $1, $3);}
+         | TK_ID '(' E ')'                  {gera_chamada($$, $1, $3);}
+         ;
 
 CMD_IF : '<'TK_IF '('E')' '>' CMDS TK_END TK_IF '>'             {gera_cmd_if( $$, $4, $7, "");}
        | '<'TK_IF '('E')' '>' CMDS TK_ELSE CMDS  TK_END TK_IF '>' {gera_cmd_if( $$, $4, $7, $9.c);}
        ;    
     
-SAIDA : TK_PRINT '(' E ')'        { $$.c = $3.c + "  printf( \"%"+ $3.t.fmt + "\", " + $3.v + " );\n"; }
+SAIDA : TK_PRINT '(' F ')'        { $$.c = $3.c + "  printf( \"%"+ $3.t.fmt + "\", " + $3.v + " );\n"; }
       ;
    
 E : E '+' E     		 { gera_codigo_operador( $$, $1, $2, $3 ); }

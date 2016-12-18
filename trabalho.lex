@@ -9,7 +9,7 @@ DIGITO  [0-9]
 LETRA   [A-Za-z_]
 ID      {LETRA}({LETRA}|{DIGITO})*
 
-END         fim
+END         <fim
 ENDALL        <fimtudo>
 BEGINALL      <comecatudo>
 
@@ -17,6 +17,7 @@ INT		    int
 DOUBLE		double
 CHAR		char
 STRING		string
+VOID        void
 IF		    si
 ELSE		"<"sinão">"
 FOR		    para
@@ -41,6 +42,7 @@ CINT {DIGITO}+
 {DOUBLE}	{ trata_folha(); return TK_DOUBLE; }
 {CHAR}		{ trata_folha(); return TK_CHAR; }
 {STRING} 	{ trata_folha(); return TK_STRING; }
+{VOID}      { trata_folha(); return TK_VOID; }
 {IF} 		{ trata_folha(); return TK_IF; }
 {ELSE} 		{ trata_folha(); return TK_ELSE; }
 {FOR} 		{ trata_folha(); return TK_FOR; }
