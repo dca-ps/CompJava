@@ -9,7 +9,7 @@ DIGITO  [0-9]
 LETRA   [A-Za-z_]
 ID      {LETRA}({LETRA}|{DIGITO})*
 
-END         <fim
+END           <fim
 ENDALL        <fimtudo>
 BEGINALL      <comecatudo>
 
@@ -46,10 +46,12 @@ CINT {DIGITO}+
 {DOUBLE}	{ trata_folha(); return TK_DOUBLE; }
 {CHAR}		{ trata_folha(); return TK_CHAR; }
 {STRING} 	{ trata_folha(); return TK_STRING; }
+{BOOL}      { trata_folha(); return TK_BOOL; }
 {VOID}      { trata_folha(); return TK_VOID; }
 {IF} 		{ trata_folha(); return TK_IF; }
 {ELSE} 		{ trata_folha(); return TK_ELSE; }
 {FOR} 		{ trata_folha(); return TK_FOR; }
+{WHILE}     { trata_folha(); return TK_WHILE; }
 {FUNCTION}  { trata_folha(); return TK_FUNCTION; }
 {PRINT}		{ trata_folha(); return TK_PRINT; }
 {INPUT}		{ trata_folha(); return TK_INPUT; }

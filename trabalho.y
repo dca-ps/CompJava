@@ -333,7 +333,7 @@ void gera_cmd_while(Atributo& ss, const Atributo& s4, const Atributo& s7){
     string lbl_inicio_while = gera_nome_label("inicio_while");
     string lbl_fim_while = gera_nome_label("fim_while");
 
-    ss.c =  s4.c + "  " + lbl_inicio_while + ":;\n" + s7.c +
+    ss.c =  "  " + lbl_inicio_while + ":;\n" + s7.c +
             "  if (!(" + s4.v + ")) goto " + lbl_fim_while + ";\n" +
             "\n" +
             "\n  goto " + lbl_inicio_while + ";\n  " +
@@ -520,7 +520,7 @@ CMD_IF : '<'TK_IF '('E')' '>' CMDS TK_END TK_IF '>'             {gera_cmd_if( $$
        | '<'TK_IF '('E')' '>' CMDS TK_ELSE CMDS  TK_END TK_IF '>' {gera_cmd_if( $$, $4, $7, $9.c);}
        ;
 
-CMD_WHILE : '<'TK_WHILE '(' E ')' '>' CMDS TK_END TK_WHILE '>'  {gera_cmd_while($$, $4, $7);}
+CMD_WHILE : '<'TK_WHILE '(' E ')' '>' CMDS TK_END TK_WHILE'>'  {gera_cmd_while($$, $4, $7);}
           ;
     
 SAIDA : TK_PRINT '(' F ')'        { $$.c = $3.c + "  printf( \"%"+ $3.t.fmt + "\", " + $3.v + " );\n"; }
@@ -546,6 +546,7 @@ F : TK_CSTRING   		 { $$ = $1; $$.t = String; }
   | TK_ID '['E']''['E']' { calcula_matrix( $$, $1, $3, $6 );  }
   | TK_ID '['E']'        { $$.v = $1.v + "[" +$3.v +"]"+";\n";  }
   | '('E')'       		 { $$ = $2; }
+  |
   ;     
  
 %%

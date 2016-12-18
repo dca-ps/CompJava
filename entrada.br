@@ -13,8 +13,7 @@ void <funcao bla(int a)>
 
 <comecatudo>
     int d;
-    <enquanto(d == 0)>
-    escrevi("foudasci");
-    bla(d);
+    <enquanto (d == 0)>
     <fimenquanto>
+
 <fimtudo>
