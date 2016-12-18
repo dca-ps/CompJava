@@ -5,7 +5,7 @@ double jdahngjd;
 
 void <funcao bla(int a)>
     int b;
-    <si (b == 0)>
+    <si ("abc" != "bcd")>
         escrevi(b);
     <fimsi>
     b = 5*(b+b);
@@ -13,7 +13,7 @@ void <funcao bla(int a)>
 
 <comecatudo>
     int d;
-    <enquanto (d == 0)>
-    <fimenquanto>
-
+    <faca>
+    bla(d);
+    <fimenquanto(d==0)>
 <fimtudo>

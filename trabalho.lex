@@ -26,8 +26,9 @@ FUNCTION	funcao
 PRINT		escrevi
 INPUT       le
 WHILE       enquanto
-DOWHILE     facaenquanto
+DO          faca
 SWITCH      interruptor
+CASE        caso
 
 CSTRING	"\""([^"\n]|"''")*"\""
 CDOUBLE	({DIGITO}+)"."{DIGITO}+
@@ -52,6 +53,9 @@ CINT {DIGITO}+
 {ELSE} 		{ trata_folha(); return TK_ELSE; }
 {FOR} 		{ trata_folha(); return TK_FOR; }
 {WHILE}     { trata_folha(); return TK_WHILE; }
+{DO}        { trata_folha(); return TK_DO; }
+{SWITCH}    { trata_folha(); return TK_SWITCH; }
+{CASE}      { trata_folha(); return TK_CASE; }
 {FUNCTION}  { trata_folha(); return TK_FUNCTION; }
 {PRINT}		{ trata_folha(); return TK_PRINT; }
 {INPUT}		{ trata_folha(); return TK_INPUT; }

@@ -340,6 +340,21 @@ void gera_cmd_while(Atributo& ss, const Atributo& s4, const Atributo& s7){
             lbl_fim_while + ":;\n";
 }
 
+void gera_cmd_dowhile(Atributo& ss, const Atributo& s4, const Atributo& s8){
+    string lbl_inicio_dowhile = gera_nome_label("inicio_dowhile");
+    string lbl_fim_dowhile = gera_nome_label("fim_dowhile");
+
+    ss.c = "  " + lbl_inicio_dowhile + ":;\n" + s4.c + "  if(!(" + s8.v + ")) goto " + lbl_fim_dowhile + ";\n" +
+    "\n" + "\n goto " + lbl_inicio_dowhile + ";\n " + lbl_fim_dowhile + ":;\n";
+}
+
+void gera_cmd_switch() {
+
+}
+
+void gera_case(Atributo& ss, const Atributo& s4, const Atributo& s7) {
+}
+
 void gera_codigo_atomico(Atributo& ss,const Atributo& s1, const Atributo& s2){
 	string aux;
 	if(s1.t.nome==String.nome||s1.t.nome==Char.nome){
@@ -401,7 +416,7 @@ void gera_chamada(Atributo& ss, const Atributo& s1, const Atributo& s3) {
 %token TK_PRINT TK_CSTRING TK_STRING TK_INPUT TK_END TK_BEGINALL TK_ENDALL
 %token TK_MAIG TK_MEIG TK_IG TK_DIF TK_IF TK_ELSE TK_AND TK_OR
 %token TK_FOR TK_DO TK_WHILE TK_MAIN TK_PLUSPLUS TK_FUNCTION TK_MINUSMINUS
-%token TK_DOWHILE TK_SWITCH
+%token TK_SWITCH TK_CASE
 
 %left TK_AND TK_OR
 %nonassoc '<' '>' TK_MAIG TK_MEIG '=' TK_DIF TK_IG
@@ -488,9 +503,10 @@ CMD : SAIDA';'     		{$$=$1;}
     | CMD_FOR      		{$$=$1;}
     | CMD_ATRIB';'    {$$=$1;}
     | CMD_ATOM';' 		{$$=$1;}
-    | CMDTK_INPUT';'		{$$=$1;}
+    | CMD_INPUT';'		{$$=$1;}
     | CMD_FUNC';'       {$$=$1;}
-    | CMD_WHILE';'      {$$=$1;}
+    | CMD_WHILE     {$$=$1;}
+    | CMD_DOWHILE   {$$=$1;}
     ;
     
 CMD_ATRIB : LVALUE '=' E 								{gera_codigo_atribuicao($$, $1, $3); }
@@ -499,8 +515,8 @@ CMD_ATRIB : LVALUE '=' E 								{gera_codigo_atribuicao($$, $1, $3); }
           ;  
 
 CMD_ATOM: LVALUE TK_PLUSPLUS   {gera_codigo_atomico($$,$1,$2);}
-				| LVALUE TK_MINUSMINUS {gera_codigo_atomico($$,$1,$2);}
-				;
+        | LVALUE TK_MINUSMINUS {gera_codigo_atomico($$,$1,$2);}
+        ;
 
 LVALUE: TK_ID { busca_tipo_da_variavel( $$, $1 ); }
       ;
@@ -509,7 +525,7 @@ CMD_FOR : '<'TK_FOR '('CMD_ATRIB';' E ';' CMD_ATOM ')''>' CMDS TK_END TK_FOR'>' 
         | '<'TK_FOR '('CMD_ATRIB';' E ';' CMD_ATRIB ')''>' CMDS TK_END TK_FOR'>' {gera_cmd_for($$,$4,$6,$8,$11);}
         ;    
 
-CMDTK_INPUT : TK_INPUT '(' LVALUE ')'		{ gera_input( $$, $3);}
+CMD_INPUT : TK_INPUT '(' LVALUE ')'		{ gera_input( $$, $3);}
             ;
 
 CMD_FUNC : TK_ID '(' LVALUE ')'             { gera_chamada($$, $1, $3);}
@@ -522,7 +538,23 @@ CMD_IF : '<'TK_IF '('E')' '>' CMDS TK_END TK_IF '>'             {gera_cmd_if( $$
 
 CMD_WHILE : '<'TK_WHILE '(' E ')' '>' CMDS TK_END TK_WHILE'>'  {gera_cmd_while($$, $4, $7);}
           ;
-    
+
+CMD_DOWHILE : '<' TK_DO '>' CMDS TK_END TK_WHILE '(' E ')' '>' {gera_cmd_dowhile($$, $4, $8);}
+            ;
+
+/*CMD_SWITCH : '<' TK_SWITCH '(' E ')' BLOCO_SWITCH TK_END TK_SWITCH '>' {gera_cmd_switch($$, $4, $6);};
+
+BLOCO_SWITCH : CASES DEFAULT {$$.c = $1.c + $2.c;};
+
+CASES : CASE CASES {$$.c = $1.c + $2.c;};
+      | {$$.c = "";}
+      ;
+CASE: '<'TK_CASE '(' E ')' '>' CMDS TK_END TK_CASE '>' {gera_case($$, $4, $7);};
+
+DEFAULT : CMDS {$$=$1;};
+        | {$$.c = "";}
+        ;
+*/
 SAIDA : TK_PRINT '(' F ')'        { $$.c = $3.c + "  printf( \"%"+ $3.t.fmt + "\", " + $3.v + " );\n"; }
       ;
    
@@ -561,8 +593,8 @@ void inicializa_tabela_de_resultado_de_operacoes() {
   tro[ "%" ] = r;
 
   r[par(Integer, Integer)] = Integer;
-  r[par(Integer, Double)] = Double;
   r[par(Double, Integer)] = Double;
+  r[par(Integer, Double)] = Double;
   r[par(Double, Double)] = Double;    
 
   tro[ "-" ] = r; 
