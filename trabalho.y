@@ -391,7 +391,7 @@ void calcula_matrix( Atributo& ss, const Atributo& s1, const Atributo& s3, const
 int gera_codigo_final(string codigo){
   FILE* arq;
 
-  arq=fopen("saida.cc","w");
+  arq=fopen("gerado.cc","w");
   fprintf(arq, "%s",codigo.c_str());
   fclose(arq);
   return 0;
