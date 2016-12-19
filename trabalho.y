@@ -407,10 +407,14 @@ void gera_codigo_atomico(Atributo& ss,const Atributo& s1, const Atributo& s2){
 	}
 }
 
-void gera_codigo_funcao(Atributo& ss,const Atributo& s1, const Atributo& s4, const Atributo& s7, const Atributo& s10) {
-    //if(s1.t.nome == "void") erro("Funcao void nao tem retorno.");
-    ss.c = s1.t.decl + " " + s4.v + " (" + s7.c + "){\n  " + declara_var_temp(temp_local) + "  " + s10.c + "}\n";
-
+void gera_codigo_funcao(Atributo& ss,const Atributo& s1, const Atributo& s4, const Atributo& s7, const Atributo& s10, const Atributo& s11) {
+    if(ss.t.nome == s11.t.nome and s1.t.retorno) {
+        ss.c = s1.t.decl + " " + s4.v + " (" + s7.c + "){\n  " + declara_var_temp(temp_local) + "  " + s10.c + s11.c + "}\n";
+    }
+    else if (ss.t.nome == s11.t.nome and not s1.t.retorno){
+        ss.c = s1.t.decl + " " + s4.v + " (" + s7.c + "){\n  " + declara_var_temp(temp_local) + "  " + s10.c + s11.c + "}\n";
+    }
+    else erro("Retorno invalido");
 }
 
 void calcula_matrix( Atributo& ss, const Atributo& s1, const Atributo& s3, const Atributo& s6 ){
@@ -530,8 +534,8 @@ ID: ID ',' TK_ID { $$.lst = $1.lst; $$.lst.push_back( $3.v ); }
   | TK_ID  { $$.lst.push_back( $1.v ); }
   ;
 
-FUNCTION: TIPO_FUNC '<' TK_FUNCTION TK_ID {escopo_local=true; tsl.clear();}'(' ARGS ')' '>' FUNC TK_END TK_FUNCTION '>'
-				{gera_codigo_funcao($$,$1, $4,$7,$10);	escopo_local=false; tsl.clear(); }
+FUNCTION: TIPO_FUNC '<' TK_FUNCTION TK_ID {escopo_local=true; tsl.clear();}'(' ARGS ')' '>' FUNC RETURN TK_END TK_FUNCTION '>'
+				{gera_codigo_funcao($$,$1, $4,$7,$10, $11);	escopo_local=false; tsl.clear(); }
 ;
 
 ARGS: IDS {$$=$1;}
@@ -559,7 +563,6 @@ CMD : SAIDA';'     		{$$=$1;}
     | CMD_WHILE     {$$=$1;}
     | CMD_DOWHILE   {$$=$1;}
     | CMD_SWITCH    {$$=$1;}
-    | CMD_RETURN';' {$$=$1;}
     ;
     
 CMD_ATRIB : LVALUE '=' E 								{gera_codigo_atribuicao($$, $1, $3); }
@@ -597,7 +600,7 @@ CMD_DOWHILE : '<' TK_DO '>' CMDS TK_END TK_WHILE '(' E ')' '>' {gera_cmd_dowhile
 
 CMD_SWITCH : '<' TK_SWITCH '(' E ')' '>'  BLOCO_SWITCH TK_END TK_SWITCH '>' {gera_cmd_switch($$, $4, $7);};
 
-CMD_RETURN: TK_RETURN E {$$.c = " return " + $2.v + ";\n";};
+RETURN : TK_RETURN E {$$.c = " return " + $2.v + ";\n"; $$.v = $2.v;};
           | TK_RETURN {$$.c = " return;\n";};
           | {$$.c = "";}
           ;
