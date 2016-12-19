@@ -554,14 +554,15 @@ CMD_DOWHILE : '<' TK_DO '>' CMDS TK_END TK_WHILE '(' E ')' '>' {gera_cmd_dowhile
 CMD_SWITCH : '<' TK_SWITCH '(' E ')' '>'  BLOCO_SWITCH TK_END TK_SWITCH '>' {gera_cmd_switch($$, $4, $7);};
 
 BLOCO_SWITCH : CASES DEFAULT {$$.c = $1.c + $2.c;};
+            | CASES { $$.c = $1.c;}
+            ;
 
 CASES : CASE CASES {$$.c = $1.c + $2.c;};
       | {$$.c = "";}
       ;
 CASE: '<'TK_CASE '(' E ')' '>' CMDS TK_END TK_CASE '>' {gera_case($$, $4, $7);};
 
-DEFAULT: '<' TK_DEFAULT '>' CMDS TK_END TK_DEFAULT '>'{gera_default($$, $4);};
-        | {$$.c = "";}
+DEFAULT: TK_DEFAULT '>' CMDS TK_END TK_DEFAULT '>' {gera_default($$, $2);};
         ;
 
 SAIDA : TK_PRINT '(' F ')'        { $$.c = $3.c + "  cout << " + $3.v + ";\n"

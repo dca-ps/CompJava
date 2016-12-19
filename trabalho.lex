@@ -60,7 +60,7 @@ CINT {DIGITO}+
 {FUNCTION}  { trata_folha(); return TK_FUNCTION; }
 {PRINT}		{ trata_folha(); return TK_PRINT; }
 {INPUT}		{ trata_folha(); return TK_INPUT; }
-{DEFAULT}		{ trata_folha(); return TK_DEFAULT; }
+{DEFAULT}	{ trata_folha(); return TK_DEFAULT; }
 
 
 {CSTRING} 	{ trata_aspas_simples(); return TK_CSTRING; }

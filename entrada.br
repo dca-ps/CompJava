@@ -18,8 +18,12 @@ void <funcao bla(int a)>
         <caso (3)>
             escrevi (3);
         <fimcaso>
-        <padrao>
-        <fimpadrao>
+        <caso (5)>
+              escrevi (5);
+        <fimcaso>
+        padrao>
+            escrevi("padrao");
+       <fimpadrao>
 
     <fiminterruptor>
 <fimtudo>
