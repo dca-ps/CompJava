@@ -358,7 +358,7 @@ void gera_cmd_switch(Atributo& ss, const Atributo& s4, const Atributo& s6) {
     string lbl_inicio_switch = gera_nome_label("inicio_switch"+toString(nswitch));
     string lbl_fim_switch = gera_nome_label("fim_switch"+toString(nswitch));
 
-    string teste_cases = "int var ;\n";
+    string teste_cases = "int var;\n";
     string label;
     int tam = vetor_indice_cases.size();
     for(int i = 0; i < tam ; i++){
@@ -374,7 +374,7 @@ void gera_cmd_switch(Atributo& ss, const Atributo& s4, const Atributo& s6) {
     vetor_indice_cases.clear();
     nswitch++;
 
-    ss.c = " " + lbl_inicio_switch + ":\n" + s4.c + "\n" + teste_cases + "\n"
+    ss.c = " " + lbl_inicio_switch + ":;\n" + s4.c + "\n" + teste_cases + "\n"
     + s6.c + "\n" + lbl_fim_switch + ":;\n";
 }
 
@@ -383,14 +383,14 @@ void gera_cmd_switch(Atributo& ss, const Atributo& s4, const Atributo& s6) {
 void gera_case(Atributo& ss, const Atributo& s4, const Atributo& s7, const Atributo& s8, const Atributo& s9) {
     string valor = s4.v;
     string lbl_case = gera_nome_label("case"+toString(nswitch)+valor);
-    ss.c = " " + lbl_case + ":\n" + s7.c + s8.c + s9.c +"\n";
+    ss.c = " " + lbl_case + ":;\n" + s7.c + s8.c + s9.c +"\n";
     vetor_indice_cases.push_back(valor);
 
 }
 
 void gera_default(Atributo& ss, const Atributo& s3) {
     string lbl_default = gera_nome_label("default" + toString(nswitch));
-    ss.c = " " + lbl_default + ":\n" + s3.c + "\n";
+    ss.c = " " + lbl_default + ":;\n" + s3.c + "\n";
 
 
 }
@@ -408,7 +408,7 @@ void gera_codigo_atomico(Atributo& ss,const Atributo& s1, const Atributo& s2){
 }
 
 void gera_codigo_funcao(Atributo& ss,const Atributo& s1, const Atributo& s4, const Atributo& s7, const Atributo& s10) {
-    if(s1.t.nome == "void" and ) erro("Funcao void nao tem retorno.");
+    //if(s1.t.nome == "void") erro("Funcao void nao tem retorno.");
     ss.c = s1.t.decl + " " + s4.v + " (" + s7.c + "){\n  " + declara_var_temp(temp_local) + "  " + s10.c + "}\n";
 
 }
@@ -451,6 +451,10 @@ void gera_chamada(Atributo& ss, const Atributo& s1, const Atributo& s3) {
     ss.c = s1.v + "(" + s3.v + ");\n" ;
 }
 
+void gera_relacionais(Atributo& ss, const Atributo& s1, const Atributo& s2, const Atributo& s3) {
+
+}
+
 %}
 
 %token TK_ID TK_CINT TK_CDOUBLE TK_INT TK_DOUBLE TK_CHAR TK_BOOL TK_VOID
@@ -469,9 +473,9 @@ void gera_chamada(Atributo& ss, const Atributo& s1, const Atributo& s3) {
 %%
 
 S : MIOLOS  ABRE PRINCIPAL FECHA
-  { cout << gera_codigo_final( "#include <stdlib.h>\n"
-                "#include <string.h>\n" 
-                "#include <stdio.h>\n\n"
+  { cout << gera_codigo_final( "#include <iostream>\n"
+                "#include <string>\n"
+                "\n"
                  "using namespace std;\n\n"+ declara_var_temp( temp_global ) + $1.c +"int main (){\n" +$3.c+"}")<<endl;
   }
   ;
@@ -613,6 +617,7 @@ DEFAULT: TK_DEFAULT '>' CMDS TK_END TK_DEFAULT '>' {gera_default($$, $3);};
 BREAK: TK_BREAK ';' {$$.c = " goto L_fim_switch" + toString(nswitch)+"_1;\n";};
        | {$$.c = "";};
 
+
 SAIDA : TK_PRINT '(' F ')'        { $$.c = $3.c + "  cout << " + $3.v + ";\n"
                                                     "  cout << endl;\n";
                                            }
@@ -668,11 +673,11 @@ void inicializa_tabela_de_resultado_de_operacoes() {
   tro[ "+" ] = r; 
   
   r.clear();
-  r[par(Integer, Integer)] = Boolean;
-  r[par(Double, Double)] = Boolean;
-  r[par(Char, Char)] = Boolean;
-  r[par(String, String)] = Boolean;
-  r[par(Boolean, Boolean)] = Boolean;
+  r[par(Integer, Integer)] = Integer;
+  r[par(Double, Double)] = Integer;
+  r[par(Char, Char)] = Integer;
+  r[par(String, String)] = Integer;
+  r[par(Boolean, Boolean)] = Integer;
   tro["=="] = r;
   tro["!="] = r;
   tro[">="] = r;

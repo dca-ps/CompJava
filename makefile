@@ -1,8 +1,8 @@
 all: trabalho entrada.br
 	trabalho.exe < entrada.br
-#	gabarito.exe < gerado.cc
-#	g++ -o saida gerado.cc
-#	saida.exe
+	gabarito.exe < gerado.cc
+	g++ -o saida gerado.cc
+	saida.exe
 
 lex.yy.c: trabalho.lex
 	flex trabalho.lex
