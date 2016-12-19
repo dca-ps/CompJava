@@ -3,13 +3,12 @@ double q;
 char p[5];
 double jdahngjd;
 
-int <funcao bla(int a)>
+void <funcao bla(int a)>
     int b;
     <si ("abc" != "bcd")>
         escrevi(b);
     <fimsi>
     b = 5*(b+b);
-    retorna b;
 
 <fimfuncao>
 

@@ -408,7 +408,7 @@ void gera_codigo_atomico(Atributo& ss,const Atributo& s1, const Atributo& s2){
 }
 
 void gera_codigo_funcao(Atributo& ss,const Atributo& s1, const Atributo& s4, const Atributo& s7, const Atributo& s10, const Atributo& s11) {
-    if((s1.t.nome == s11.t.nome) || s1.t.nome == "void" ) {
+    if((s1.t.nome == s11.t.nome) || (s1.t.nome == "void" && s11.c == "" ) ) {
         ss.c = s1.t.decl + " " + s4.v + " (" + s7.c + "){\n  " + declara_var_temp(temp_local) + "  " + s10.c + s11.c + "}\n";
     }
     else erro("Retorno invalido");
