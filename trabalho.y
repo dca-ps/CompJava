@@ -430,7 +430,8 @@ void gera_chamada(Atributo& ss, const Atributo& s1, const Atributo& s3) {
 S : MIOLOS  ABRE PRINCIPAL FECHA
   { cout << gera_codigo_final( "#include <stdlib.h>\n"
                 "#include <string.h>\n" 
-                "#include <stdio.h>\n\n" + declara_var_temp( temp_global ) + $1.c +"int main (){\n" +$3.c+"}")<<endl;
+                "#include <stdio.h>\n\n"
+                 "using namespace std;\n\n"+ declara_var_temp( temp_global ) + $1.c +"int main (){\n" +$3.c+"}")<<endl;
   }
   ;
 
@@ -560,7 +561,9 @@ DEFAULT : CMDS {$$=$1;};
         | {$$.c = "";}
         ;
 */
-SAIDA : TK_PRINT '(' F ')'        { $$.c = $3.c + "  printf( \"%"+ $3.t.fmt + "\", " + $3.v + " );\n"; }
+SAIDA : TK_PRINT '(' F ')'        { $$.c = $3.c + "  cout << " + $3.v + ";\n"
+                                                    "  cout << endl;\n";
+                                           }
       ;
    
 E : E '+' E     		 { gera_codigo_operador( $$, $1, $2, $3 ); }
