@@ -1,6 +1,6 @@
 %{
 int yyrowno = 1;
-int yylineno = 0;
+int yylineno = 1;
 void trata_folha();
 void trata_aspas_simples();
 %}

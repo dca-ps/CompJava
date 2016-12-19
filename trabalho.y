@@ -412,6 +412,7 @@ void gera_codigo_funcao(Atributo& ss,const Atributo& s1, const Atributo& s4, con
     string temp = "" + s4.v;
     std::pair<std::map<string,vector<string>>::iterator,bool> ret;
     ret =funcoes.insert(std::pair<string, vector<string>> (temp,atributos_funcao));
+    atributos_funcao.clear();
     if(ret.second==false){
         erro("Funcao já declarada");
     }
@@ -457,6 +458,11 @@ void gera_input(Atributo& ss, const Atributo& s3){
 }
 
 void gera_chamada(Atributo& ss, const Atributo& s1, const Atributo& s3) {
+    cout<< " s1.c " << s1.c << " s1.v " << s1.v << " s3.c " << s3.c << " s3.v " << s3.v;
+    for(int i = 0; i<atributos_funcao.size(); i++){
+        cout<< i << " = "<< atributos_funcao[i] << "\n";
+    }
+
     ss.c = s1.v + "(" + s3.v + ");\n" ;
 }
 
@@ -594,9 +600,11 @@ CMD_FOR : '<'TK_FOR '('CMD_ATRIB';' E ';' CMD_ATOM ')''>' CMDS TK_END TK_FOR'>' 
 CMD_INPUT : TK_INPUT '(' LVALUE ')'		{ gera_input( $$, $3);}
             ;
 
-CMD_FUNC : TK_ID '(' LVALUE ')'             { gera_chamada($$, $1, $3);}
-         | TK_ID '(' E ')'                  {gera_chamada($$, $1, $3);}
+CMD_FUNC : TK_ID {atributos_funcao.clear();} '(' CHAMADA_MULT ')'             { gera_chamada($$, $1, $4);}
          ;
+CHAMADA_MULT : LVALUE ',' CHAMADA_MULT {$$.v = $1.v + $3.v; atributos_funcao.push_back($1.t.nome); };
+               | E ',' CHAMADA_MULT {$$.v = $1.v + $3.v; atributos_funcao.push_back($1.t.nome);};
+               | {$$.v = "";};
 
 CMD_IF : '<'TK_IF '('E')' '>' CMDS TK_END TK_IF '>'             {gera_cmd_if( $$, $4, $7, "");}
        | '<'TK_IF '('E')' '>' CMDS TK_ELSE CMDS  TK_END TK_IF '>' {gera_cmd_if( $$, $4, $7, $9.c);}
