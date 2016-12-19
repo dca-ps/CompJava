@@ -1,0 +1,24 @@
+string <funcao formata( string a, string b )>
+  <si( a > b )>
+      retorna "Sr(a). " + a + " " + b;
+  <fimsi>
+  <sinao>
+      retorna "Mr(s). " + b + ", " + a;
+    <fimsinao>
+<fimfuncao>
+
+
+<comecatudo>
+    string nomes[2]; // Se você não implementou arrays de strings, use duas variáveis.
+
+    escrevi("Digite o seu nome: ");
+    le(nomes[0]);
+
+    escrevi("Digite o seu sobrenome: ");
+    le(nomes[1]);
+
+    escrevi("Bom dia, " + formata( nomes[0], nomes[1]));
+    escrevi("Bom dia, " + formata( " " + nomes[0], nomes[1] ));
+    escrevi("Bom dia, " + formata( nomes[0], " " + nomes[1] ));
+
+<fimtudo>
