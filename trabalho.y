@@ -40,7 +40,8 @@ void erro( string );
 map<string,Tipo> ts;
 map<string,Tipo> tsl;
 map< string, map< string, Tipo > > tro;// tipo_resltado_operacao;
-map<string, vector<Tipo>> funcoes;
+map<string, vector<string>> funcoes;
+vector<string> atributos_funcao;
 
 // contadores para variáveis temporariras
 map< string, int > temp_global;
@@ -328,8 +329,8 @@ void gera_cmd_for(Atributo& ss, const Atributo& s4, const Atributo& s6, const At
 	string lbl_inicio_for = gera_nome_label("inicio_for");								
 	string lbl_fim_for = gera_nome_label("fim_for");									
 
-	ss.c =  s4.c + "  " + lbl_inicio_for + ":;\n" + s6.c +
-			"  if (!(" + s6.v + ")) goto " + lbl_fim_for + ";\n" +s11.c +
+	ss.c =  s4.c + "  " + lbl_inicio_for + ":;\n" + s6.c + s6.v + "= !" + s6.v + "; \n" +
+			"  if (" + s6.v + ") goto " + lbl_fim_for + ";\n" +s11.c +
 			"\n" + s8.c +
 			"\n  goto " + lbl_inicio_for + ";\n  " +
 			lbl_fim_for + ":;\n";
@@ -339,9 +340,9 @@ void gera_cmd_while(Atributo& ss, const Atributo& s4, const Atributo& s7){
     string lbl_inicio_while = gera_nome_label("inicio_while");
     string lbl_fim_while = gera_nome_label("fim_while");
 
-    ss.c =  "  " + lbl_inicio_while + ":;\n" + s7.c +
-            "  if (!(" + s4.v + ")) goto " + lbl_fim_while + ";\n" +
-            "\n" +
+    ss.c =  lbl_inicio_while + ":;\n" + s4.c + s4.v + "= !" + s4.v + ";\n"
+            "  if (" + s4.v + ") goto " + lbl_fim_while + ";\n" +
+            "\n" +  s7.c +
             "\n  goto " + lbl_inicio_while + ";\n  " +
             lbl_fim_while + ":;\n";
 }
@@ -350,7 +351,7 @@ void gera_cmd_dowhile(Atributo& ss, const Atributo& s4, const Atributo& s8){
     string lbl_inicio_dowhile = gera_nome_label("inicio_dowhile");
     string lbl_fim_dowhile = gera_nome_label("fim_dowhile");
 
-    ss.c = "  " + lbl_inicio_dowhile + ":;\n" + s4.c + "  if(!(" + s8.v + ")) goto " + lbl_fim_dowhile + ";\n" +
+    ss.c = "  " + lbl_inicio_dowhile + ":;\n" + s4.c + s8.c + s8.v + "= !" + s8.v + ";\n" + " if(" + s8.v + ") goto " + lbl_fim_dowhile + ";\n" +
     "\n" + "\n goto " + lbl_inicio_dowhile + ";\n " + lbl_fim_dowhile + ":;\n";
 }
 
@@ -358,15 +359,15 @@ void gera_cmd_switch(Atributo& ss, const Atributo& s4, const Atributo& s6) {
     string lbl_inicio_switch = gera_nome_label("inicio_switch"+toString(nswitch));
     string lbl_fim_switch = gera_nome_label("fim_switch"+toString(nswitch));
 
-    string teste_cases = "int var;\n";
+    string teste_cases = "";
     string label;
     int tam = vetor_indice_cases.size();
     for(int i = 0; i < tam ; i++){
        string var = vetor_indice_cases.front();
        vetor_indice_cases.erase(vetor_indice_cases.begin());
         label = "L_case" + toString(nswitch) + var +"_1";
-       teste_cases += " var = " + s4.v + " == " + var + ";\n";
-       teste_cases += "if(var) goto " + label + ";\n";
+       teste_cases += " var_aux_switch = " + s4.v + " == " + var + ";\n";
+       teste_cases += "if(var_aux_switch) goto " + label + ";\n";
     }
     label = "L_default" + toString(nswitch) + "_1";
     teste_cases += "goto " + label + ";\n";
@@ -408,6 +409,13 @@ void gera_codigo_atomico(Atributo& ss,const Atributo& s1, const Atributo& s2){
 }
 
 void gera_codigo_funcao(Atributo& ss,const Atributo& s1, const Atributo& s4, const Atributo& s7, const Atributo& s10, const Atributo& s11) {
+    string temp = "" + s4.v;
+    std::pair<std::map<string,vector<string>>::iterator,bool> ret;
+    ret =funcoes.insert(std::pair<string, vector<string>> (temp,atributos_funcao));
+    if(ret.second==false){
+        erro("Funcao já declarada");
+    }
+
     if((s1.t.nome == s11.t.nome) || (s1.t.nome == "void" && s11.c == "" ) ) {
         ss.c = s1.t.decl + " " + s4.v + " (" + s7.c + "){\n  " + declara_var_temp(temp_local) + "  " + s10.c + s11.c + "}\n";
     }
@@ -477,7 +485,7 @@ S : MIOLOS  ABRE PRINCIPAL FECHA
   { cout << gera_codigo_final( "#include <iostream>\n"
                 "#include <string>\n"
                 "\n"
-                 "using namespace std;\n\n"+ declara_var_temp( temp_global ) + $1.c +"int main (){\n" +$3.c+"}")<<endl;
+                 "using namespace std;\n\n"+ declara_var_temp( temp_global ) + "int var_aux_switch;\n" + $1.c +"int main (){\n" +$3.c+"}")<<endl;
   }
   ;
 
@@ -544,7 +552,7 @@ ARGS: IDS {$$=$1;}
     ;
      
 IDS : TIPO TK_ID ',' IDS 	{$$.c=$1.t.decl + " " + $2.v+" , "+$4.c;}
-    | TIPO TK_ID 					{$$.c= $1.t.decl + " " + $2.v;}
+    | TIPO TK_ID 					{$$.c= $1.t.decl + " " + $2.v; if(escopo_local) atributos_funcao.push_back($1.t.decl);}
     ;      
    
 PRINCIPAL : MAIN_DECLS CMDS {$$.c=$1.c+$2.c;}
@@ -564,6 +572,7 @@ CMD : SAIDA';'     		{$$=$1;}
     | CMD_WHILE     {$$=$1;}
     | CMD_DOWHILE   {$$=$1;}
     | CMD_SWITCH    {$$=$1;}
+    | DECL
     ;
     
 CMD_ATRIB : LVALUE '=' E 								{gera_codigo_atribuicao($$, $1, $3); }

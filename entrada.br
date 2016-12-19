@@ -1,20 +1,17 @@
 int a;
 double q;
 char p[5];
-double jdahngjd;
-
-void <funcao bla(int a)>
-    int b;
-    <si ("abc" != "bcd")>
-        escrevi(b);
-    <fimsi>
-    b = 5*(b+b);
-
-<fimfuncao>
+string jdahngjd;
 
 <comecatudo>
     int d;
+
     d = 5;
+    <faca>
+        escrevi(d);
+    <fimenquanto(d == 3)>
+
+
     <interruptor (d)>
         <caso (3)>
             escrevi (3);
