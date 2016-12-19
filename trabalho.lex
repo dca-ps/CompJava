@@ -23,6 +23,7 @@ IF		    si
 ELSE		"<"sinão">"
 FOR		    para
 DEFAULT		padrao
+BREAK       quebra
 FUNCTION	funcao
 PRINT		escrevi
 INPUT       le
@@ -61,6 +62,8 @@ CINT {DIGITO}+
 {PRINT}		{ trata_folha(); return TK_PRINT; }
 {INPUT}		{ trata_folha(); return TK_INPUT; }
 {DEFAULT}	{ trata_folha(); return TK_DEFAULT; }
+{BREAK}	{ trata_folha(); return TK_BREAK; }
+
 
 
 {CSTRING} 	{ trata_aspas_simples(); return TK_CSTRING; }

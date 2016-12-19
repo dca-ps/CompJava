@@ -378,10 +378,10 @@ void gera_cmd_switch(Atributo& ss, const Atributo& s4, const Atributo& s6) {
 
 
 
-void gera_case(Atributo& ss, const Atributo& s4, const Atributo& s7) {
+void gera_case(Atributo& ss, const Atributo& s4, const Atributo& s7, const Atributo& s8, const Atributo& s9) {
     string valor = s4.v;
     string lbl_case = gera_nome_label("case"+toString(nswitch)+valor);
-    ss.c = " " + lbl_case + ":\n" + s7.c + "\n";
+    ss.c = " " + lbl_case + ":\n" + s7.c + s8.c + s9.c +"\n";
     vetor_indice_cases.push_back(valor);
 
 }
@@ -454,7 +454,7 @@ void gera_chamada(Atributo& ss, const Atributo& s1, const Atributo& s3) {
 %token TK_PRINT TK_CSTRING TK_STRING TK_INPUT TK_END TK_BEGINALL TK_ENDALL
 %token TK_MAIG TK_MEIG TK_IG TK_DIF TK_IF TK_ELSE TK_AND TK_OR
 %token TK_FOR TK_DO TK_WHILE TK_MAIN TK_PLUSPLUS TK_FUNCTION TK_MINUSMINUS
-%token TK_SWITCH TK_CASE TK_DEFAULT
+%token TK_SWITCH TK_CASE TK_DEFAULT TK_BREAK
 
 %left TK_AND TK_OR
 %nonassoc '<' '>' TK_MAIG TK_MEIG '=' TK_DIF TK_IG
@@ -595,11 +595,14 @@ BLOCO_SWITCH : CASES DEFAULT {$$.c = $1.c + $2.c;};
 CASES : CASE CASES {$$.c = $1.c + $2.c;};
       | {$$.c = "";}
       ;
-CASE: '<'TK_CASE '(' E ')' '>' CMDS TK_END TK_CASE '>' {gera_case($$, $4, $7);};
+CASE:'<'TK_CASE '(' E ')' '>' CMDS BREAK TK_END TK_CASE '>' {gera_case($$, $4, $7, $8, $9);};
 
 DEFAULT: TK_DEFAULT '>' CMDS TK_END TK_DEFAULT '>' {gera_default($$, $3);};
         |{$$.c = " " + gera_nome_label("default" + toString(nswitch)) + ":;\n";};
         ;
+
+BREAK: TK_BREAK ';' {$$.c = " goto L_fim_switch" + toString(nswitch)+"_1;\n";};
+       | {$$.c = "";};
 
 SAIDA : TK_PRINT '(' F ')'        { $$.c = $3.c + "  cout << " + $3.v + ";\n"
                                                     "  cout << endl;\n";

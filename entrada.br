@@ -17,9 +17,11 @@ void <funcao bla(int a)>
     <interruptor (d)>
         <caso (3)>
             escrevi (3);
+            quebra;
         <fimcaso>
         <caso (5)>
               escrevi (5);
+              quebra;
         <fimcaso>
        padrao>
             escrevi ("padrao");
