@@ -44,7 +44,11 @@ map<string, vector<Tipo>> funcoes;
 map< string, int > temp_global;
 map< string, int > temp_local;
 map< string, int > nlabel;
+
+vector<string> vetor_indice_cases;
+
 bool escopo_local = false;
+int nswitch = 0 ;
 
 string toString( int n ) {
   char buf[256] = "";
@@ -349,12 +353,44 @@ void gera_cmd_dowhile(Atributo& ss, const Atributo& s4, const Atributo& s8){
 }
 
 void gera_cmd_switch(Atributo& ss, const Atributo& s4, const Atributo& s6) {
+    string lbl_inicio_switch = gera_nome_label("inicio_switch"+toString(nswitch));
+    string lbl_fim_switch = gera_nome_label("fim_switch"+toString(nswitch));
 
+    string teste_cases = "int var ;\n";
+    string label;
+    int tam = vetor_indice_cases.size();
+    for(int i = 0; i < tam ; i++){
+       string var = vetor_indice_cases.front();
+       vetor_indice_cases.erase(vetor_indice_cases.begin());
+        label = "L_case" + toString(nswitch) + var +"_1";
+       teste_cases += " var = " + s4.v + " == " + var + ";\n";
+       teste_cases += "if(var) goto " + label + ";\n";
+    }
+    label = "L_default" + toString(nswitch) + "_1";
+    teste_cases += "goto " + label + ";\n";
+
+    vetor_indice_cases.clear();
+    nswitch++;
+
+    ss.c = " " + lbl_inicio_switch + ":\n" + s4.c + "\n" + teste_cases + "\n"
+    + s6.c + "\n" + lbl_fim_switch + ":;\n";
 }
+
+
 
 void gera_case(Atributo& ss, const Atributo& s4, const Atributo& s7) {
+    string valor = s4.v;
+    string lbl_case = gera_nome_label("case"+toString(nswitch)+valor);
+    ss.c = " " + lbl_case + ":\n" + s7.c + "\n";
+    vetor_indice_cases.push_back(valor);
+
 }
-void gera_default(Atributo& ss, const Atributo& s4) {
+
+void gera_default(Atributo& ss, const Atributo& s3) {
+    string lbl_default = gera_nome_label("default" + toString(nswitch));
+    ss.c = " " + lbl_default + ":\n" + s3.c + "\n";
+
+
 }
 
 void gera_codigo_atomico(Atributo& ss,const Atributo& s1, const Atributo& s2){
@@ -554,15 +590,15 @@ CMD_DOWHILE : '<' TK_DO '>' CMDS TK_END TK_WHILE '(' E ')' '>' {gera_cmd_dowhile
 CMD_SWITCH : '<' TK_SWITCH '(' E ')' '>'  BLOCO_SWITCH TK_END TK_SWITCH '>' {gera_cmd_switch($$, $4, $7);};
 
 BLOCO_SWITCH : CASES DEFAULT {$$.c = $1.c + $2.c;};
-            | CASES { $$.c = $1.c;}
-            ;
+    ;
 
 CASES : CASE CASES {$$.c = $1.c + $2.c;};
       | {$$.c = "";}
       ;
 CASE: '<'TK_CASE '(' E ')' '>' CMDS TK_END TK_CASE '>' {gera_case($$, $4, $7);};
 
-DEFAULT: TK_DEFAULT '>' CMDS TK_END TK_DEFAULT '>' {gera_default($$, $2);};
+DEFAULT: TK_DEFAULT '>' CMDS TK_END TK_DEFAULT '>' {gera_default($$, $3);};
+        |{$$.c = " " + gera_nome_label("default" + toString(nswitch)) + ":;\n";};
         ;
 
 SAIDA : TK_PRINT '(' F ')'        { $$.c = $3.c + "  cout << " + $3.v + ";\n"
