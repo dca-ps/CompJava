@@ -9,6 +9,7 @@ void <funcao bla(int a)>
         escrevi(b);
     <fimsi>
     b = 5*(b+b);
+    retorna 0;
 <fimfuncao>
 
 <comecatudo>
@@ -26,7 +27,6 @@ void <funcao bla(int a)>
        padrao>
             escrevi ("padrao");
        <fimpadrao>
-
 
     <fiminterruptor>
 <fimtudo>

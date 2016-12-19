@@ -11,16 +11,18 @@ using namespace std;
 struct Tipo {
   string nome;  
   string decl;  
-  string fmt;   
+  string fmt;
+    bool retorno;
   vector<int> dim;
+
 };
 
-Tipo Integer = { "integer", "int", "d" };
-Tipo Double =  { "double", "double", "lf" };
-Tipo String =  { "string", "char", "s" };
-Tipo Char =    { "char", "char", "c" };
-Tipo Void =    { "void", "void", " "};
-Tipo Boolean = { "boolean", "bool", "" };
+Tipo Integer = { "integer", "int", "d",true };
+Tipo Double =  { "double", "double", "lf", true };
+Tipo String =  { "string", "char", "s",true };
+Tipo Char =    { "char", "char", "c", true };
+Tipo Void =    { "void", "void", "", false };
+Tipo Boolean = { "boolean", "bool", "", true };
 
 struct Atributo {
   string v, c;
@@ -405,10 +407,11 @@ void gera_codigo_atomico(Atributo& ss,const Atributo& s1, const Atributo& s2){
 	}
 }
 
-void gera_codigo_funcao(Atributo& ss,const Atributo& s1, const Atributo& s4, const Atributo& s7, const Atributo& s10){
-	ss.c=s1.t.decl+" "+s4.v+" ("+ s7.c +"){\n  "+declara_var_temp(temp_local)+"  "+s10.c+"}\n";
-}
+void gera_codigo_funcao(Atributo& ss,const Atributo& s1, const Atributo& s4, const Atributo& s7, const Atributo& s10) {
+    if(s1.t.nome == "void" and ) erro("Funcao void nao tem retorno.");
+    ss.c = s1.t.decl + " " + s4.v + " (" + s7.c + "){\n  " + declara_var_temp(temp_local) + "  " + s10.c + "}\n";
 
+}
 
 void calcula_matrix( Atributo& ss, const Atributo& s1, const Atributo& s3, const Atributo& s6 ){
 	string aux1, aux2;
@@ -454,7 +457,7 @@ void gera_chamada(Atributo& ss, const Atributo& s1, const Atributo& s3) {
 %token TK_PRINT TK_CSTRING TK_STRING TK_INPUT TK_END TK_BEGINALL TK_ENDALL
 %token TK_MAIG TK_MEIG TK_IG TK_DIF TK_IF TK_ELSE TK_AND TK_OR
 %token TK_FOR TK_DO TK_WHILE TK_MAIN TK_PLUSPLUS TK_FUNCTION TK_MINUSMINUS
-%token TK_SWITCH TK_CASE TK_DEFAULT TK_BREAK
+%token TK_SWITCH TK_CASE TK_DEFAULT TK_BREAK TK_RETURN
 
 %left TK_AND TK_OR
 %nonassoc '<' '>' TK_MAIG TK_MEIG '=' TK_DIF TK_IG
@@ -552,6 +555,7 @@ CMD : SAIDA';'     		{$$=$1;}
     | CMD_WHILE     {$$=$1;}
     | CMD_DOWHILE   {$$=$1;}
     | CMD_SWITCH    {$$=$1;}
+    | CMD_RETURN';' {$$=$1;}
     ;
     
 CMD_ATRIB : LVALUE '=' E 								{gera_codigo_atribuicao($$, $1, $3); }
@@ -589,13 +593,18 @@ CMD_DOWHILE : '<' TK_DO '>' CMDS TK_END TK_WHILE '(' E ')' '>' {gera_cmd_dowhile
 
 CMD_SWITCH : '<' TK_SWITCH '(' E ')' '>'  BLOCO_SWITCH TK_END TK_SWITCH '>' {gera_cmd_switch($$, $4, $7);};
 
+CMD_RETURN: TK_RETURN E {$$.c = " return " + $2.v + ";\n";};
+          | TK_RETURN {$$.c = " return;\n";};
+          | {$$.c = "";}
+          ;
+
 BLOCO_SWITCH : CASES DEFAULT {$$.c = $1.c + $2.c;};
     ;
 
 CASES : CASE CASES {$$.c = $1.c + $2.c;};
       | {$$.c = "";}
       ;
-CASE:'<'TK_CASE '(' E ')' '>' CMDS BREAK TK_END TK_CASE '>' {gera_case($$, $4, $7, $8, $9);};
+CASE:'<'TK_CASE '(' E ')' '>' CMDS BREAK CMDS TK_END TK_CASE '>' {gera_case($$, $4, $7, $8, $9);};
 
 DEFAULT: TK_DEFAULT '>' CMDS TK_END TK_DEFAULT '>' {gera_default($$, $3);};
         |{$$.c = " " + gera_nome_label("default" + toString(nswitch)) + ":;\n";};

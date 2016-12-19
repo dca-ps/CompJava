@@ -31,6 +31,7 @@ WHILE       enquanto
 DO          faca
 SWITCH      interruptor
 CASE        caso
+RETURN      retorna
 
 CSTRING	"\""([^"\n]|"''")*"\""
 CDOUBLE	({DIGITO}+)"."{DIGITO}+
@@ -62,7 +63,8 @@ CINT {DIGITO}+
 {PRINT}		{ trata_folha(); return TK_PRINT; }
 {INPUT}		{ trata_folha(); return TK_INPUT; }
 {DEFAULT}	{ trata_folha(); return TK_DEFAULT; }
-{BREAK}	{ trata_folha(); return TK_BREAK; }
+{BREAK}	    { trata_folha(); return TK_BREAK; }
+{RETURN}    { trata_folha(); return TK_RETURN; }
 
 
 
