@@ -13,7 +13,13 @@ void <funcao bla(int a)>
 
 <comecatudo>
     int d;
-    <faca>
-    bla(d);
-    <fimenquanto(d==0)>
+    d = 5;
+    <interruptor (d)>
+        <caso (3)>
+            escrevi (3);
+        <fimcaso>
+        <padrao>
+        <fimpadrao>
+
+    <fiminterruptor>
 <fimtudo>

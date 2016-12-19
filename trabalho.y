@@ -348,11 +348,13 @@ void gera_cmd_dowhile(Atributo& ss, const Atributo& s4, const Atributo& s8){
     "\n" + "\n goto " + lbl_inicio_dowhile + ";\n " + lbl_fim_dowhile + ":;\n";
 }
 
-void gera_cmd_switch() {
+void gera_cmd_switch(Atributo& ss, const Atributo& s4, const Atributo& s6) {
 
 }
 
 void gera_case(Atributo& ss, const Atributo& s4, const Atributo& s7) {
+}
+void gera_default(Atributo& ss, const Atributo& s4) {
 }
 
 void gera_codigo_atomico(Atributo& ss,const Atributo& s1, const Atributo& s2){
@@ -416,7 +418,7 @@ void gera_chamada(Atributo& ss, const Atributo& s1, const Atributo& s3) {
 %token TK_PRINT TK_CSTRING TK_STRING TK_INPUT TK_END TK_BEGINALL TK_ENDALL
 %token TK_MAIG TK_MEIG TK_IG TK_DIF TK_IF TK_ELSE TK_AND TK_OR
 %token TK_FOR TK_DO TK_WHILE TK_MAIN TK_PLUSPLUS TK_FUNCTION TK_MINUSMINUS
-%token TK_SWITCH TK_CASE
+%token TK_SWITCH TK_CASE TK_DEFAULT
 
 %left TK_AND TK_OR
 %nonassoc '<' '>' TK_MAIG TK_MEIG '=' TK_DIF TK_IG
@@ -513,6 +515,7 @@ CMD : SAIDA';'     		{$$=$1;}
     | CMD_FUNC';'       {$$=$1;}
     | CMD_WHILE     {$$=$1;}
     | CMD_DOWHILE   {$$=$1;}
+    | CMD_SWITCH    {$$=$1;}
     ;
     
 CMD_ATRIB : LVALUE '=' E 								{gera_codigo_atribuicao($$, $1, $3); }
@@ -548,7 +551,7 @@ CMD_WHILE : '<'TK_WHILE '(' E ')' '>' CMDS TK_END TK_WHILE'>'  {gera_cmd_while($
 CMD_DOWHILE : '<' TK_DO '>' CMDS TK_END TK_WHILE '(' E ')' '>' {gera_cmd_dowhile($$, $4, $8);}
             ;
 
-/*CMD_SWITCH : '<' TK_SWITCH '(' E ')' BLOCO_SWITCH TK_END TK_SWITCH '>' {gera_cmd_switch($$, $4, $6);};
+CMD_SWITCH : '<' TK_SWITCH '(' E ')' '>'  BLOCO_SWITCH TK_END TK_SWITCH '>' {gera_cmd_switch($$, $4, $7);};
 
 BLOCO_SWITCH : CASES DEFAULT {$$.c = $1.c + $2.c;};
 
@@ -557,10 +560,10 @@ CASES : CASE CASES {$$.c = $1.c + $2.c;};
       ;
 CASE: '<'TK_CASE '(' E ')' '>' CMDS TK_END TK_CASE '>' {gera_case($$, $4, $7);};
 
-DEFAULT : CMDS {$$=$1;};
+DEFAULT: '<' TK_DEFAULT '>' CMDS TK_END TK_DEFAULT '>'{gera_default($$, $4);};
         | {$$.c = "";}
         ;
-*/
+
 SAIDA : TK_PRINT '(' F ')'        { $$.c = $3.c + "  cout << " + $3.v + ";\n"
                                                     "  cout << endl;\n";
                                            }
