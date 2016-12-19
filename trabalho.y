@@ -470,6 +470,13 @@ TIPO: TK_INT      { $$.t = Integer; }
     | TK_DOUBLE   { $$.t = Double; }
     | TK_CHAR     { $$.t = Char; }
     | TK_STRING   { $$.t = String; }
+    ;
+
+TIPO_FUNC: TK_INT      { $$.t = Integer; }
+    | TK_DOUBLE   { $$.t = Double; }
+    | TK_CHAR     { $$.t = Char; }
+    | TK_STRING   { $$.t = String; }
+    | TK_VOID     {$$.t = Void;}
 
     ;
 
@@ -477,10 +484,8 @@ ID: ID ',' TK_ID { $$.lst = $1.lst; $$.lst.push_back( $3.v ); }
   | TK_ID  { $$.lst.push_back( $1.v ); }
   ;
 
-FUNCTION: TIPO '<' TK_FUNCTION TK_ID {escopo_local=true; tsl.clear();}'(' ARGS ')' '>' FUNC TK_END TK_FUNCTION '>'
+FUNCTION: TIPO_FUNC '<' TK_FUNCTION TK_ID {escopo_local=true; tsl.clear();}'(' ARGS ')' '>' FUNC TK_END TK_FUNCTION '>'
 				{gera_codigo_funcao($$,$1, $4,$7,$10);	escopo_local=false; tsl.clear(); }
-        | TK_VOID '<' TK_FUNCTION TK_ID {escopo_local=true; tsl.clear();}'(' ARGS ')' '>' FUNC TK_END TK_FUNCTION '>'
-                {gera_codigo_funcao($$,$1, $4,$7,$10);	escopo_local=false; tsl.clear(); }
 ;
 
 ARGS: IDS {$$=$1;}
