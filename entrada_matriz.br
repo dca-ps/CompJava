@@ -1,0 +1,62 @@
+int seed;
+
+int <funcao pseudo_random()>
+    int aux;
+
+    seed = (8253729 * seed + 2396403);
+
+    aux = (seed % 32767 + 32767) % 32767;
+    return aux;
+
+<fimfuncao>
+
+void <funcao multiplica( double a[3][4], double b[4][2], int lin_a, int col_a, int lin_b, int col_b, double c[3][2] )>
+    int i, j, k;
+
+    if( lin_b != col_a ) {
+        printf( "Matrizes incompativeis para multiplicação\n" );
+    }
+
+    <para( i = 0; i < lin_a; i++ )>
+        <para( j = 0; j < col_b; j++ )>
+            c[i][j] = 0;
+
+            <para( k = 0; k < lin_b; k++ )>
+              c[i][j] = c[i][j] + a[i][k] * b[k][j];
+            <fimpara>
+        <fimpara>
+     <fimpara>
+
+<fimfuncao>
+
+void <funcao imprime( double m[3][2], int l, int c )>
+    int i, j;
+
+    <para( i = 0; i < l; i++ )>
+        escrevi("\n");
+        <para( j = 0; j < c; j++ )>
+            escrevi(m[i][j]);
+        <fimpara>
+     <fimpara>
+
+<fimfuncao>
+
+<comecatudo>
+    seed = 5343;
+    double a[3][4], b[4][2], c[3][2];
+    int i, j, k;
+
+    <para( i = 0; i < 3; i++ )>
+        <para( j = 0; j < 4; j++ )>
+            a[i][j] = (pseudo_random() % 10);
+
+    <para( i = 0; i < 4; i++ )>
+        <para( j = 0; j < 2; j++ )>
+            b[i][j] = (pseudo_random() % 10);
+
+    multiplica( a, b, 3, 4, 4, 2, c );
+
+    imprime( c, 3, 2 );
+    imprime( c, 3, 3 );
+
+<fimtudo>
