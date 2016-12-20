@@ -1,9 +1,9 @@
 int a;
 double q;
 char p[5];
-string jdahngjd;
+string x;
 
-void <funcao bla(int a)>
+void <funcao bla(int a, double d)>
     int b;
     string jdahngjd1;
     b = 5*(b+b);
@@ -14,7 +14,7 @@ void <funcao bla(int a)>
     int d;
 
     d = 5;
-    bla(45);
+    bla (45, q);
 
 
     <interruptor (d)>

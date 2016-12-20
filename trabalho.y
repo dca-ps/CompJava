@@ -409,9 +409,11 @@ void gera_codigo_atomico(Atributo& ss,const Atributo& s1, const Atributo& s2){
 }
 
 void gera_codigo_funcao(Atributo& ss,const Atributo& s1, const Atributo& s4, const Atributo& s7, const Atributo& s10, const Atributo& s11) {
+   
+
     string temp = "" + s4.v;
     std::pair<std::map<string,vector<string>>::iterator,bool> ret;
-    ret =funcoes.insert(std::pair<string, vector<string>> (temp,atributos_funcao));
+    ret = funcoes.insert(std::pair<string, vector<string>> (temp,atributos_funcao));
     atributos_funcao.clear();
     if(ret.second==false){
         erro("Funcao já declarada");
@@ -458,10 +460,23 @@ void gera_input(Atributo& ss, const Atributo& s3){
 }
 
 void gera_chamada(Atributo& ss, const Atributo& s1, const Atributo& s3) {
-    cout<< " s1.c " << s1.c << " s1.v " << s1.v << " s3.c " << s3.c << " s3.v " << s3.v;
-    for(int i = 0; i<atributos_funcao.size(); i++){
-        cout<< i << " = "<< atributos_funcao[i] << "\n";
+    std::map<string,vector<string>>::iterator item = funcoes.find(s1.v);
+    if(item != funcoes.end()){
+        if(atributos_funcao.size() == item->second.size()){
+            for(int i = 0; i < atributos_funcao.size(); i++){
+                    if(atributos_funcao[i] != item->second[item->second.size()-1 - i]) erro("Tipo incompatível");
+                }
+        }
+        else{
+            erro("Numero de parametros inadequados");
+        }
     }
+    else{
+        erro("Função não declarada");
+    }
+
+
+
 
     ss.c = s1.v + "(" + s3.v + ");\n" ;
 }
@@ -545,7 +560,7 @@ ID: ID ',' TK_ID { $$.lst = $1.lst; $$.lst.push_back( $3.v ); }
   | TK_ID  { $$.lst.push_back( $1.v ); }
   ;
 
-FUNCTION: TIPO_FUNC '<' TK_FUNCTION TK_ID {escopo_local=true; tsl.clear();}'(' ARGS ')' '>' FUNC RETURN TK_END TK_FUNCTION '>'
+FUNCTION: TIPO_FUNC '<' TK_FUNCTION TK_ID {escopo_local=true; tsl.clear(); atributos_funcao.clear(); }'(' ARGS ')' '>' FUNC RETURN TK_END TK_FUNCTION '>'
 				{gera_codigo_funcao($$,$1, $4,$7,$10, $11);	escopo_local=false; tsl.clear(); }
 ;
 RETURN : TK_RETURN E ';' {$$.c = " return " + $2.v + ";\n"; $$.t = $2.t;};
@@ -557,8 +572,8 @@ ARGS: IDS {$$=$1;}
     |  		{$$.c="";}
     ;
      
-IDS : TIPO TK_ID ',' IDS 	{$$.c=$1.t.decl + " " + $2.v+" , "+$4.c;}
-    | TIPO TK_ID 					{$$.c= $1.t.decl + " " + $2.v; if(escopo_local) atributos_funcao.push_back($1.t.decl);}
+IDS : TIPO TK_ID ',' IDS 	{atributos_funcao.push_back($1.t.nome); $$.c=$1.t.decl + " " + $2.v+" , "+$4.c;}
+    | TIPO TK_ID 					{atributos_funcao.push_back($1.t.nome); $$.c= $1.t.decl + " " + $2.v;  }
     ;      
    
 PRINCIPAL : MAIN_DECLS CMDS {$$.c=$1.c+$2.c;}
@@ -600,11 +615,14 @@ CMD_FOR : '<'TK_FOR '('CMD_ATRIB';' E ';' CMD_ATOM ')''>' CMDS TK_END TK_FOR'>' 
 CMD_INPUT : TK_INPUT '(' LVALUE ')'		{ gera_input( $$, $3);}
             ;
 
-CMD_FUNC : TK_ID {atributos_funcao.clear();} '(' CHAMADA_MULT ')'             { gera_chamada($$, $1, $4);}
+CMD_FUNC : TK_ID {atributos_funcao.clear();} '(' CHAMADAS_MULT ')' {gera_chamada($$, $1, $4); }
          ;
-CHAMADA_MULT : LVALUE ',' CHAMADA_MULT {$$.v = $1.v + $3.v; atributos_funcao.push_back($1.t.nome); };
-               | E ',' CHAMADA_MULT {$$.v = $1.v + $3.v; atributos_funcao.push_back($1.t.nome);};
-               | {$$.v = "";};
+
+CHAMADAS_MULT : CHAMADA_MULT ',' CHAMADAS_MULT {$$.v = $1.v + ","+ $3.v;}
+                | CHAMADA_MULT {$$ = $1;};
+                |{$$.v = "";};
+CHAMADA_MULT: E {atributos_funcao.push_back($1.t.nome); $$ = $1;  };
+
 
 CMD_IF : '<'TK_IF '('E')' '>' CMDS TK_END TK_IF '>'             {gera_cmd_if( $$, $4, $7, "");}
        | '<'TK_IF '('E')' '>' CMDS TK_ELSE CMDS  TK_END TK_IF '>' {gera_cmd_if( $$, $4, $7, $9.c);}
