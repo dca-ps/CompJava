@@ -198,8 +198,11 @@ void busca_tipo_da_variavel( Atributo& ss, const Atributo& s1 ) {
             }
             else{
                 ss.t = tsl[ s1.v ];
-            }            
-            ss.v = s1.v;
+            }
+            if(s1.t.nome == String.nome){
+             ss.v = s1.v + "["+toString(s1.t.dim[0]+1)+"]" ;
+            }
+
   	    }
 	}
 	else{//comment
@@ -208,7 +211,10 @@ void busca_tipo_da_variavel( Atributo& ss, const Atributo& s1 ) {
         }
       	else {
         	ss.t = ts[ s1.v ];
-        	ss.v = s1.v;
+        	 if(s1.t.nome == String.nome){
+                  ss.v = s1.v + "["+toString(s1.t.dim[0]+1)+"]" ;
+             }
+
       	}
     }
 }
@@ -484,6 +490,25 @@ void gera_chamada(Atributo& ss, const Atributo& s1, const Atributo& s3) {
 void gera_relacionais(Atributo& ss, const Atributo& s1, const Atributo& s2, const Atributo& s3) {
 
 }
+void gera_chamada_string(Atributo& ss, const Atributo& s1, const Atributo& s2){
+    atributos_funcao.push_back(s1.t.nome);
+        if(s1.t.nome == String.nome){
+            ss.c =s1.t.decl + " " + s2.v + "["+toString(256)+"]" ;
+        }
+        else{
+            ss.c= s1.t.decl + " " + s2.v;
+        }
+}
+void gera_chamada_string2(Atributo& ss, const Atributo& s1, const Atributo& s2, const Atributo& s4){
+    atributos_funcao.push_back(s1.t.nome);
+        if(s1.t.nome == String.nome){
+            ss.c =s1.t.decl + " " + s2.v + "["+toString(256)+"]" +" , "+s4.c; ;
+        }
+        else{
+            ss.c= s1.t.decl + " " + s2.v+" , "+s4.c;
+        }
+}
+
 
 %}
 
@@ -572,8 +597,8 @@ ARGS: IDS {$$=$1;}
     |  		{$$.c="";}
     ;
      
-IDS : TIPO TK_ID ',' IDS 	{atributos_funcao.push_back($1.t.nome); $$.c=$1.t.decl + " " + $2.v+" , "+$4.c;}
-    | TIPO TK_ID 					{atributos_funcao.push_back($1.t.nome); $$.c= $1.t.decl + " " + $2.v;  }
+IDS : TIPO TK_ID ',' IDS 	{gera_chamada_string2($$,$1,$2,$4);}
+    | TIPO TK_ID 					{gera_chamada_string($$,$1,$2);}
     ;      
    
 PRINCIPAL : MAIN_DECLS CMDS {$$.c=$1.c+$2.c;}
