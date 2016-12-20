@@ -481,10 +481,6 @@ void gera_chamada(Atributo& ss, const Atributo& s1, const Atributo& s3) {
     ss.c = s1.v + "(" + s3.v + ");\n" ;
 }
 
-void gera_relacionais(Atributo& ss, const Atributo& s1, const Atributo& s2, const Atributo& s3) {
-
-}
-
 %}
 
 %token TK_ID TK_CINT TK_CDOUBLE TK_INT TK_DOUBLE TK_CHAR TK_BOOL TK_VOID
@@ -670,6 +666,8 @@ E : E '+' E     		 { gera_codigo_operador( $$, $1, $2, $3 ); }
   | E TK_DIF E   { gera_codigo_operador( $$, $1, $2, $3 ); }
   | E TK_MAIG E  { gera_codigo_operador( $$, $1, $2, $3 ); }
   | E TK_MEIG E  { gera_codigo_operador( $$, $1, $2, $3 ); }
+  | E TK_AND E  { gera_codigo_operador( $$, $1, $2, $3 ); }
+  | E TK_OR E { gera_codigo_operador( $$, $1, $2, $3 ); }
   | F
   ;
   
@@ -721,6 +719,11 @@ void inicializa_tabela_de_resultado_de_operacoes() {
   tro[">"] = r;
   tro["<"] = r;
   tro["<="] = r;
+
+    r.clear();
+    r[par(Integer, Integer)] = Integer;
+    tro["&&"] = r;
+    tro["||"] = r;
 }
 
 void erro( string st ) {

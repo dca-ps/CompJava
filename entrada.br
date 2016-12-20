@@ -24,7 +24,8 @@ void <funcao bla1(int a, double d)>
     bla (45, q);
     bla1(12,45.6);
 
-
+    <si(d == 5 || a == 2)>
+    <fimsi>
     <interruptor (d)>
         <caso (3)>
             escrevi (3);
