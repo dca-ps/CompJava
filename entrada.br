@@ -10,11 +10,19 @@ void <funcao bla(int a, double d)>
 
 <fimfuncao>
 
+void <funcao bla1(int a, double d)>
+    int b;
+    string jdahngjd1;
+    b = 5*(b+b);
+
+<fimfuncao>
+
 <comecatudo>
     int d;
 
     d = 5;
     bla (45, q);
+    bla1(12,45.6);
 
 
     <interruptor (d)>

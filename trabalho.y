@@ -409,7 +409,7 @@ void gera_codigo_atomico(Atributo& ss,const Atributo& s1, const Atributo& s2){
 }
 
 void gera_codigo_funcao(Atributo& ss,const Atributo& s1, const Atributo& s4, const Atributo& s7, const Atributo& s10, const Atributo& s11) {
-   
+
 
     string temp = "" + s4.v;
     std::pair<std::map<string,vector<string>>::iterator,bool> ret;
@@ -675,6 +675,7 @@ E : E '+' E     		 { gera_codigo_operador( $$, $1, $2, $3 ); }
   
 F : TK_CSTRING   		 { $$ = $1; $$.t = String; }
   | TK_CINT  		 { $$ = $1; $$.t = Integer; }
+  | TK_CDOUBLE  		 { $$ = $1; $$.t = Double; }
   | TK_ID           		 { busca_tipo_da_variavel( $$, $1 );  }
   | TK_ID '['E']''['E']' { calcula_matrix( $$, $1, $3, $6 );  }
   | TK_ID '['E']'        { $$.v = $1.v + "[" +$3.v +"]"+";\n";  }
