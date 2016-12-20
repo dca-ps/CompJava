@@ -198,11 +198,8 @@ void busca_tipo_da_variavel( Atributo& ss, const Atributo& s1 ) {
             }
             else{
                 ss.t = tsl[ s1.v ];
-            }
-            if(s1.t.nome == String.nome){
-             ss.v = s1.v + "["+toString(s1.t.dim[0]+1)+"]" ;
-            }
-
+            }            
+            ss.v = s1.v;
   	    }
 	}
 	else{//comment
@@ -487,9 +484,6 @@ void gera_chamada(Atributo& ss, const Atributo& s1, const Atributo& s3) {
     ss.c = s1.v + "(" + s3.v + ");\n" ;
 }
 
-void gera_relacionais(Atributo& ss, const Atributo& s1, const Atributo& s2, const Atributo& s3) {
-
-}
 void gera_chamada_string(Atributo& ss, const Atributo& s1, const Atributo& s2){
     atributos_funcao.push_back(s1.t.nome);
         if(s1.t.nome == String.nome){
@@ -508,7 +502,6 @@ void gera_chamada_string2(Atributo& ss, const Atributo& s1, const Atributo& s2, 
             ss.c= s1.t.decl + " " + s2.v+" , "+s4.c;
         }
 }
-
 
 %}
 
@@ -695,6 +688,8 @@ E : E '+' E     		 { gera_codigo_operador( $$, $1, $2, $3 ); }
   | E TK_DIF E   { gera_codigo_operador( $$, $1, $2, $3 ); }
   | E TK_MAIG E  { gera_codigo_operador( $$, $1, $2, $3 ); }
   | E TK_MEIG E  { gera_codigo_operador( $$, $1, $2, $3 ); }
+  | E TK_AND E  { gera_codigo_operador( $$, $1, $2, $3 ); }
+  | E TK_OR E { gera_codigo_operador( $$, $1, $2, $3 ); }
   | F
   ;
   
@@ -746,6 +741,11 @@ void inicializa_tabela_de_resultado_de_operacoes() {
   tro[">"] = r;
   tro["<"] = r;
   tro["<="] = r;
+
+    r.clear();
+    r[par(Integer, Integer)] = Integer;
+    tro["&&"] = r;
+    tro["||"] = r;
 }
 
 void erro( string st ) {
