@@ -152,7 +152,7 @@ void gera_codigo_atribuicao( Atributo& ss,
   else if( s1.t.nome == s3.t.nome &&  s1.t.nome == String.nome) {
     ss.c = s1.c + s3.c + "  " 
            + "strncpy( " + s1.v + ", " + s3.v + ", " + 
-           toString( s1.t.dim[0]+1) + " );\n";
+           toString( s1.t.dim[0]) + " );\n";
   }
 }
 
@@ -198,8 +198,11 @@ void busca_tipo_da_variavel( Atributo& ss, const Atributo& s1 ) {
             }
             else{
                 ss.t = tsl[ s1.v ];
-            }            
-            ss.v = s1.v;
+            }
+            if(s1.t.nome == String.nome){
+             ss.v = s1.v + "["+toString(s1.t.dim[0]+1)+"]" ;
+            }
+
   	    }
 	}
 	else{//comment
@@ -484,9 +487,12 @@ void gera_chamada(Atributo& ss, const Atributo& s1, const Atributo& s3) {
     ss.c = s1.v + "(" + s3.v + ");\n" ;
 }
 
+<<<<<<< HEAD
+void gera_relacionais(Atributo& ss, const Atributo& s1, const Atributo& s2, const Atributo& s3) {
+
+}
 void gera_chamada_string(Atributo& ss, const Atributo& s1, const Atributo& s2){
     atributos_funcao.push_back(s1.t.nome);
-    declara_variavel(ss, s1, s2, "");
         if(s1.t.nome == String.nome){
             ss.c =s1.t.decl + " " + s2.v + "["+toString(256)+"]" ;
         }
@@ -495,18 +501,18 @@ void gera_chamada_string(Atributo& ss, const Atributo& s1, const Atributo& s2){
         }
 }
 void gera_chamada_string2(Atributo& ss, const Atributo& s1, const Atributo& s2, const Atributo& s4){
-        atributos_funcao.push_back(s1.t.nome);
-        declara_variavel(ss, s1, s2, "");
+    atributos_funcao.push_back(s1.t.nome);
         if(s1.t.nome == String.nome){
             ss.c =s1.t.decl + " " + s2.v + "["+toString(256)+"]" +" , "+s4.c; ;
         }
         else{
             ss.c= s1.t.decl + " " + s2.v+" , "+s4.c;
         }
-
-
 }
 
+
+=======
+>>>>>>> 9bad2d9e16e774bc18cbac44ace4e10a4198fd17
 %}
 
 %token TK_ID TK_CINT TK_CDOUBLE TK_INT TK_DOUBLE TK_CHAR TK_BOOL TK_VOID
@@ -526,7 +532,7 @@ void gera_chamada_string2(Atributo& ss, const Atributo& s1, const Atributo& s2, 
 
 S : MIOLOS  ABRE PRINCIPAL FECHA
   { cout << gera_codigo_final( "#include <iostream>\n"
-                "#include <string.h>\n"
+                "#include <string>\n"
                 "\n"
                  "using namespace std;\n\n"+ declara_var_temp( temp_global ) + "int var_aux_switch;\n" + $1.c +"int main (){\n" +$3.c+"}")<<endl;
   }

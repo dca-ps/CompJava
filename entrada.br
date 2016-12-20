@@ -3,25 +3,27 @@ double q;
 char p[5];
 string x;
 
-void <funcao bla(int a, string d)>
+int <funcao bla(int t, string d)>
     int b;
+
     string jdahngjd1;
     b = 5*(b+b);
+    retorna 3;
 
 <fimfuncao>
 
 void <funcao bla1(int a, double d)>
     int b;
     string jdahngjd1;
-    b = 5*(b+b);
+    x = "sanfs";
+    b = 5*(a+a);
 
 <fimfuncao>
 
 <comecatudo>
     int d;
 
-    d = 5;
-    bla (45, x);
+    d = bla (45, x);
     bla1(12,45.6);
 
     <si(d == 5 || a == 2)>
